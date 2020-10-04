@@ -19,7 +19,7 @@ class Preprocessor:
         self.branches[name] = []
 
     def add_transformer_to_branch(self, name, transformer):
-        if self.branches[name]:
+        if name in list(self.branches.keys()):
             self.branches[name].append(transformer)
         else:
             self.branches[name] = [transformer]

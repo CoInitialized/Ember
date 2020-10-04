@@ -22,10 +22,10 @@ class ModelSelector:
                     {
                         'depth':range(3,10,2)
                     },
-                    {
-                        'subsample':[i/10.0 for i in range(6,10)],
-                        'rsm':[i/10.0 for i in range(6,10)]
-                    },
+                    # {
+                    #     'subsample':[i/10 for i in range(6,10)],
+                    #     # 'rsm':[i/10 for i in range(6,10)]
+                    # },
                     {
                         'l2_leaf_reg':[1e-5, 1e-2, 0.1, 1, 100]
                     }
@@ -78,9 +78,10 @@ class ModelSelector:
             }
 
 
-        self.model = None
+        self.models = {}
+        self.best_model = None
         if objective == 'classification':
-            self.scoring = 'roc_auc'
+            self.scoring = 'accuracy'
             self.models = {
                 "XGB": XGBClassifier,
                 "LGBM": LGBMClassifier,
@@ -122,48 +123,63 @@ class ModelSelector:
 
             axes.legend()
 
+        else:
+            raise Exception('Ni mo supportu na 3d graphy')
+
         if output_file:
             fig.savefig(output_file)
         if show:
             fig;
             plt.show()
 
-        else:
-            raise Exception('Ni mo supportu na 3d graphy')
-
         return fig, axes
 
     def fit(self,X, y, steps = 6, folds = 2, scoring = 'auto', n_jobs = -1, cv = 2):
 
+        best_score = None
         gcv = 1
         if scoring == 'auto':
             scoring = self.scoring
         for key in self.params.keys():
             learned_params = {}
             print(f"Searching model for {key}")
-            for i in range(len(self.params[key])):
+            for i in range(min([steps,len(self.params[key])])):
                 print(f'step {i}')
                 del gcv
-                gcv = GridSearchCV(estimator = self.models[key](**learned_params), param_grid = self.params[key][i], scoring=scoring, cv=folds, verbose = 2, n_jobs = n_jobs, refit= False if i < (steps - 1) else True)
+                gcv = GridSearchCV(estimator = self.models[key](**learned_params), param_grid = self.params[key][i], scoring=scoring, cv=folds, verbose = 0, n_jobs = n_jobs, refit= False if i < (steps - 1) else True)
                 print('fitowanie')
                 gcv.fit(X,y)
                 print('updatowanie')
                 learned_params.update(gcv.best_params_)
                 print('plotowanie')
-                fig, axes = self.make_plot(scores = gcv.cv_results_['mean_test_score'], params = self.params[key][i],show=True)
+                fig, axes = self.make_plot(scores = gcv.cv_results_['mean_test_score'], params = self.params[key][i],show=False)
                 name = "_".join([x for x in self.params[key][i].keys()])
                 print(name)
                 self.figures[name] = fig
             try:
                 #może nie być najlepszego modelu XD
                 self.models[key] = gcv.best_estimator_
+                if best_score:
+                    if (score := gcv.best_estimator_.score(X,y)) > best_score:
+                        best_score = score
+                        self.best_model = gcv.best_estimator_
+                else:
+                    best_score = gcv.best_estimator_.score(X,y)
+                    self.best_model = gcv.best_estimator_ 
             except:
                 pass
 
             del learned_params
             
+        return self
 
 
     def predict(self,X_test):
-        return self.model.predict(X_test)
+        return self.best_model.predict(X_test)
 
+
+    def score(self, X, y):
+        if self.best_model:
+            return self.best_model.score(X,y)
+        else:
+            raise Exception("No fitted model available")
