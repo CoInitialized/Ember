@@ -114,7 +114,8 @@ class GridSelector(Selector):
                 #może nie być najlepszego modelu XD
                 self.models[key] = gcv.best_estimator_
                 if best_score:
-                    if (score := gcv.best_estimator_.score(X,y)) > best_score:
+                    score = gcv.best_estimator_.score(X,y)
+                    if score > best_score:
                         best_score = score
                         self.best_model = gcv.best_estimator_
                 else:
