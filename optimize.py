@@ -1,81 +1,35 @@
 import numpy as np
 import matplotlib.pyplot as plt
-
 from xgboost import XGBRegressor, XGBClassifier
 from catboost import CatBoostClassifier, CatBoostRegressor
 from lightgbm import LGBMClassifier, LGBMRegressor
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, train_test_split
+from hyperopt import hp, tpe, Trials, STATUS_OK, fmin
+from search_space import grid_params, bayes_params
+from sklearn.metrics import accuracy_score, r2_score
+from functools import partial
 
-class ModelSelector:
+class Selector:
+
+    def __init__(self, objective):
+        self.objective = objective
+        self.best_model = None
+
+    def predict(self, X_test):
+        self.best_model.predict(X_test)
+
+    def score(self, X, y):
+        if self.best_model:
+            return self.best_model.score(X,y)
+        else:
+            raise Exception("No fitted model available")
+
+
+class GridSelector(Selector):
     def __init__(self,objective):
-        
-        
+        super().__init__(objective)
         self.figures = {}
-        self.params = {
-            "CAT": [
-                    {
-                        'n_estimators' : [i for i in range(50,275,25)]  
-                    },
-                    {
-                        'learning_rate' : [0.001,0.01,0.1,0.2,0.3,0.4,0.5,0.7,0.9]
-                    },
-                    {
-                        'depth':range(3,10,2)
-                    },
-                    # {
-                    #     'subsample':[i/10 for i in range(6,10)],
-                    #     # 'rsm':[i/10 for i in range(6,10)]
-                    # },
-                    {
-                        'l2_leaf_reg':[1e-5, 1e-2, 0.1, 1, 100]
-                    }
-                  
-                ],
-                "XGB": [
-                {
-                    'n_estimators' : [i for i in range(50,275,25)]
-                },
-                {
-                    'learning_rate' : [0.001,0.01,0.1,0.2,0.3,0.4,0.5,0.7,0.9]
-                },
-                {
-                     'max_depth':range(3,10,2),
-                     'min_child_weight': np.arange(0.5,6,0.5)
-                },
-                {
-                    'gamma': [i/10.0 for i in range(0,5)]
-                },
-                {
-                    'subsample':[i/10.0 for i in range(6,10)],
-                    'colsample_bytree':[i/10.0 for i in range(6,10)]
-                },
-                {
-                    'reg_alpha':[1e-5, 1e-2, 0.1, 1, 100]
-                }
-                ],
-                "LGBM": [
-                    {
-                        'n_estimators' : [i for i in range(50,275,25)]  
-                    },
-                    {
-                        'learning_rate' : [0.001,0.01,0.1,0.2,0.3,0.4,0.5,0.7,0.9]
-                    },
-                    {
-                        'max_depth':range(3,10,2),
-                        'num_leaves':np.arange(10,150,20)
-                    },
-                    {
-                        'colsample_bytree':[i/10.0 for i in range(6,10)]
-                    },
-                    {
-                        'reg_lambda':[1e-5, 1e-2, 0.1, 1, 100],
-                        'reg_alpha':[1e-5, 1e-2, 0.1, 1, 100],
-                    },
-                    {
-                        'min_split_gain': [0.0001 * x for x in [10**i for i in range(4)]]
-                    }
-                ],
-            }
+        self.params = grid_params
 
 
         self.models = {}
@@ -173,13 +127,132 @@ class ModelSelector:
             
         return self
 
+class BayesSelector(Selector):
+    def __init__(self, objective):
+        super().__init__(objective)
+        self.space_xgb = bayes_params['XGB']
 
-    def predict(self,X_test):
-        return self.best_model.predict(X_test)
+
+        self.space_lgb = bayes_params['LGBM']
+
+        self.space_cat = bayes_params['CAT']
+
+        self.objective = objective
+
+        if objective == 'classification':
+            self.scoring = accuracy_score
+            self.loss = lambda y_true, y_pred: 1 - self.scoring(y_true, y_pred)
+            self.models = {
+                "XGB": XGBClassifier,
+                "LGBM": LGBMClassifier,
+                "CAT": CatBoostClassifier
+            }
+           
+        elif objective == 'regression':
+            self.scoring = r2_score
+            self.loss = lambda y_true, y_pred, : - self.scoring(y_true, y_pred)
+            self.models = {
+                "XGB": XGBRegressor,
+                "LGBM": LGBMRegressor,
+                "CAT": CatBoostRegressor
+
+            }
+        else: 
+            raise Exception("Unknown objective, choose classification or regression")
 
 
-    def score(self, X, y):
-        if self.best_model:
-            return self.best_model.score(X,y)
+    def objective_function(self, space, model):
+        inable_table = ['n_estimators','max_depth','num_leaves']
+        for x in inable_table:
+            if x in space.keys():
+                space[x] = int(space[x])
+        if isinstance(model, CatBoostClassifier) or isinstance(model, CatBoostRegressor):
+            _model = model(logging_level = 'Silent', **space)
         else:
-            raise Exception("No fitted model available")
+            _model = model(**space)
+        _model.fit(self.X_train, self.y_train)
+        train_score = self.scoring(self.y_train, _model.predict(self.X_train))
+        test_score = self.scoring(self.y_test, _model.predict(self.X_test))
+        
+        return {'status': STATUS_OK, 'loss': self.loss(self.y_train, _model.predict(self.X_train)),
+                'test score': test_score, 'train score': train_score
+            }
+
+    
+
+    def org_results(self,trials, hyperparams, model_name):
+        fit_idx = -1
+        for idx, fit  in enumerate(trials):
+            hyp = fit['misc']['vals']
+            xgb_hyp = {key:[val] for key, val in hyperparams.items()}
+            if hyp == xgb_hyp:
+                fit_idx = idx
+                break
+                
+        train_time = str(trials[-1]['refresh_time'] - trials[0]['book_time'])
+        train_auc = round(trials[fit_idx]['result']['train score'], 3)
+        test_auc = round(trials[fit_idx]['result']['test score'], 3)
+
+        results = {
+            'model': model_name,
+            'parameter search time': train_time,
+            'test score': test_auc,
+            'training score': train_auc,
+            'parameters': hyperparams
+        }
+        return results
+
+    def fit(self, X, y, test_size = 0.2):
+
+        if(self.objective == 'classification'):
+            self.X_train, self.X_test,self.y_train, self.y_test = train_test_split(X, y, stratify=y,random_state = 42, test_size = test_size)
+        elif(self.objective == 'regression'):
+            self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, random_state = 42,test_size = test_size)
+        
+        self.all_frameworks = {'objective':self.objective,'frameworks':[
+        {
+            'name':'XGB',
+            'fn':  partial(self.objective_function, model = self.models['XGB']),
+            'space': self.space_xgb
+        },
+        {
+            'name':'LGBM',
+            'fn': partial(self.objective_function, model = self.models['LGBM']),
+            'space': self.space_lgb
+        },
+        {
+            'name':'CAT',
+            'fn': partial(self.objective_function, model = self.models['CAT']),
+            'space': self.space_cat
+        }
+        ]}
+
+        results_cumulative = {}
+        for model in self.all_frameworks['frameworks']:
+            trials = Trials()
+            hyperparams = fmin(fn = model['fn'], 
+                            max_evals = 5, 
+                            trials = trials,
+                            algo = tpe.suggest,
+                            space = model['space']
+                            )
+
+            results = self.org_results(trials.trials, hyperparams, 'XGBoost')
+            results_cumulative[model['name']] = {'score':results['test score'],'params' : results['parameters']}
+
+        best_estimator = {}
+
+
+        for key in results_cumulative.keys():
+            if best_estimator == {} or results_cumulative[key]['score'] > best_estimator['score'] :
+                best_estimator = results_cumulative[key]
+                best_estimator['booster'] = key
+
+        inable_table = ['n_estimators','max_depth','num_leaves']
+        for x in inable_table:
+            if x in best_estimator['params'].keys():
+                best_estimator['params'][x] = int(best_estimator['params'][x])
+
+        self.best_model = self.models[best_estimator['booster']](**best_estimator['params']) 
+        self.best_model.fit(X, y)   
+        return self
