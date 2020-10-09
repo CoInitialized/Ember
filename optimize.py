@@ -151,7 +151,7 @@ class BayesSelector(Selector):
            
         elif objective == 'regression':
             self.scoring = r2_score
-            self.loss = lambda y_true, y_pred, : - self.scoring(y_true, y_pred)
+            self.loss = lambda y_true, y_pred, : (-1 * self.scoring(y_true, y_pred))
             self.models = {
                 "XGB": XGBRegressor,
                 "LGBM": LGBMRegressor,
@@ -230,6 +230,7 @@ class BayesSelector(Selector):
 
         results_cumulative = {}
         for model in self.all_frameworks['frameworks']:
+            print("Training {}".format(model['name']))
             trials = Trials()
             hyperparams = fmin(fn = model['fn'], 
                             max_evals = 5, 
