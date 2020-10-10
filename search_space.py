@@ -69,31 +69,38 @@ grid_params = {
             }
 
 
-bayes_params = {
-    "XGB" : {
-            'n_estimators': hp.quniform('n_estimators', 50, 1000, 25),
-            'max_depth': hp.quniform('max_depth', 1, 12, 1),
-            'min_child_weight': hp.quniform('min_child_weight', 1, 6, 1),
-            'gamma': hp.quniform('gamma', 0.5, 1, 0.05),
-            'subsample': hp.quniform('subsample', 0.5, 1, 0.05),
-            'learning_rate': hp.loguniform('learning_rate', np.log(.001), np.log(.3)),
-            'colsample_bytree': hp.quniform('colsample_bytree', .5, 1, .1)
-        },
-    "CAT": {
-            'n_estimators': hp.quniform('n_estimators', 50, 1000, 25),
-            'learning_rate': hp.loguniform('learning_rate', np.log(0.005), np.log(0.3)),
-            'depth': hp.quniform('depth', 1, 16, 1),
-            'border_count': hp.quniform('border_count', 30, 220, 5), 
-            'l2_leaf_reg': hp.quniform('l2_leaf_reg', 1, 10, 1)
-        },
-    "LGBM": {
-            'learning_rate': hp.loguniform('learning_rate', np.log(0.001), np.log(0.3)),
-            'n_estimators': hp.quniform('n_estimators', 50, 1200, 25),
-            'max_depth': hp.quniform('max_depth', 1, 15, 1),
-            'num_leaves': hp.quniform('num_leaves', 10, 150, 1),
-            'feature_fraction': hp.uniform('feature_fraction', .3, 1.0),
-            'reg_lambda': hp.uniform('reg_lambda', 0.0, 1.0),
-            'reg_alpha': hp.uniform('reg_alpha', 0.0, 1.0),
-            'min_split_gain': hp.uniform('min_split_gain', 0.0001, 0.1)
-        }
-}
+bayes_params =  hp.choice('model_type', [
+    {
+        'name' : 'XGB',
+        'n_estimators': hp.quniform('n_estimators_xgb', 50, 1000, 25),
+        'max_depth': hp.quniform('max_depth_xgb', 1, 12, 1),
+        'min_child_weight': hp.quniform('min_child_weight_xgb', 1, 6, 1),
+        'gamma': hp.quniform('gamma_xgb', 0.5, 1, 0.05),
+        'subsample': hp.quniform('subsample_xgb', 0.5, 1, 0.05),
+        'learning_rate': hp.loguniform('learning_rate_xgb', np.log(.001), np.log(.3)),
+        'colsample_bytree': hp.quniform('colsample_bytree_xgb', .5, 1, .1)
+
+    },
+    {
+        'name' : 'LGBM',
+        'learning_rate': hp.loguniform('learning_rate_lgbm', np.log(0.001), np.log(0.3)),
+        'n_estimators': hp.quniform('n_estimators_lgbm', 50, 1200, 25),
+        'max_depth': hp.quniform('max_depth_lgbm', 1, 15, 1),
+        'num_leaves': hp.quniform('num_leaves_lgbm', 10, 150, 1),
+        'feature_fraction': hp.uniform('feature_fraction_lgbm', .3, 1.0),
+        'reg_lambda': hp.uniform('reg_lambda_lgbm', 0.0, 1.0),
+        'reg_alpha': hp.uniform('reg_alpha_lgbm', 0.0, 1.0),
+        'min_split_gain': hp.uniform('min_split_gain_lgbm', 0.0001, 0.1)
+
+    },
+    {
+        'name' : 'CAT',
+        'n_estimators': hp.quniform('n_estimators_cat', 50, 1000, 25),
+        'learning_rate': hp.loguniform('learning_rate_cat', np.log(0.005), np.log(0.3)),
+        'depth': hp.quniform('depth_cat', 1, 16, 1),
+        'border_count': hp.quniform('border_count_cat', 30, 220, 5), 
+        'l2_leaf_reg': hp.quniform('l2_leaf_reg_cat', 1, 10, 1)
+    }
+]) 
+
+    
