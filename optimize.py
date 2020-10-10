@@ -129,7 +129,7 @@ class GridSelector(Selector):
         return self
 
 class BayesSelector(Selector):
-    def __init__(self, objective):
+    def __init__(self, objective, max_evals):
         super().__init__(objective)
         self.space_xgb = bayes_params['XGB']
 
@@ -139,6 +139,8 @@ class BayesSelector(Selector):
         self.space_cat = bayes_params['CAT']
 
         self.objective = objective
+        
+        self.max_evals = max_evals
 
         if objective == 'classification':
             self.scoring = accuracy_score
@@ -167,16 +169,17 @@ class BayesSelector(Selector):
         for x in inable_table:
             if x in space.keys():
                 space[x] = int(space[x])
+
         if isinstance(model, CatBoostClassifier) or isinstance(model, CatBoostRegressor):
             _model = model(logging_level = 'Silent', **space)
         else:
             _model = model(**space)
+
         _model.fit(self.X_train, self.y_train)
         train_score = self.scoring(self.y_train, _model.predict(self.X_train))
-        test_score = self.scoring(self.y_test, _model.predict(self.X_test))
         
         return {'status': STATUS_OK, 'loss': self.loss(self.y_train, _model.predict(self.X_train)),
-                'test score': test_score, 'train score': train_score
+                'train score': train_score
             }
 
     
@@ -191,24 +194,20 @@ class BayesSelector(Selector):
                 break
                 
         train_time = str(trials[-1]['refresh_time'] - trials[0]['book_time'])
-        train_auc = round(trials[fit_idx]['result']['train score'], 3)
-        test_auc = round(trials[fit_idx]['result']['test score'], 3)
+        train_score = round(trials[fit_idx]['result']['train score'], 3)
 
         results = {
             'model': model_name,
             'parameter search time': train_time,
-            'test score': test_auc,
-            'training score': train_auc,
+            'training score': train_score,
             'parameters': hyperparams
         }
         return results
 
-    def fit(self, X, y, test_size = 0.2):
+    def fit(self, X, y):
 
-        if(self.objective == 'classification'):
-            self.X_train, self.X_test,self.y_train, self.y_test = train_test_split(X, y, stratify=y,random_state = 42, test_size = test_size)
-        elif(self.objective == 'regression'):
-            self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(X, y, random_state = 42,test_size = test_size)
+        self.X_train = X
+        self.y_train = y
         
         self.all_frameworks = {'objective':self.objective,'frameworks':[
         {
@@ -233,20 +232,19 @@ class BayesSelector(Selector):
             print("Training {}".format(model['name']))
             trials = Trials()
             hyperparams = fmin(fn = model['fn'], 
-                            max_evals = 5, 
+                            max_evals = self.max_evals, 
                             trials = trials,
                             algo = tpe.suggest,
                             space = model['space']
                             )
 
             results = self.org_results(trials.trials, hyperparams, 'XGBoost')
-            results_cumulative[model['name']] = {'score':results['test score'],'params' : results['parameters']}
+            results_cumulative[model['name']] = {'score':results['training score'],'params' : results['parameters']}
 
         best_estimator = {}
 
-
         for key in results_cumulative.keys():
-            if best_estimator == {} or results_cumulative[key]['score'] > best_estimator['score'] :
+            if best_estimator == {} or results_cumulative[key]['score'] > best_estimator['score']:
                 best_estimator = results_cumulative[key]
                 best_estimator['booster'] = key
 
