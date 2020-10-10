@@ -8,6 +8,7 @@ from hyperopt import hp, tpe, Trials, STATUS_OK, fmin
 from search_space import grid_params, bayes_params
 from sklearn.metrics import accuracy_score, r2_score
 from functools import partial
+import copy
 
 class Selector:
 
@@ -164,16 +165,23 @@ class BayesSelector(Selector):
             raise Exception("Unknown objective, choose classification or regression")
 
 
-    def objective_function(self, space, model):
+    def objective_function(self, space):
+        print(space)
+        input()
         inable_table = ['n_estimators','max_depth','num_leaves']
-        for x in inable_table:
-            if x in space.keys():
-                space[x] = int(space[x])
+        model = self.models[space['name']]
+        space2 = copy.deepcopy(space)
+        del space2['name']
 
+        for x in inable_table:
+            if x in space2.keys():
+                space2[x] = int(space2[x])
+
+        ### TEST IF IT ACTUALLY WORKS
         if isinstance(model, CatBoostClassifier) or isinstance(model, CatBoostRegressor):
-            _model = model(logging_level = 'Silent', **space)
+            _model = model(logging_level = 'Silent', **space2)
         else:
-            _model = model(**space)
+            _model = model(**space2)
 
         _model.fit(self.X_train, self.y_train)
         train_score = self.scoring(self.y_train, _model.predict(self.X_train))
@@ -184,7 +192,7 @@ class BayesSelector(Selector):
 
     
 
-    def org_results(self,trials, hyperparams, model_name):
+    def org_results(self,trials, hyperparams):
         fit_idx = -1
         for idx, fit  in enumerate(trials):
             hyp = fit['misc']['vals']
@@ -197,7 +205,6 @@ class BayesSelector(Selector):
         train_score = round(trials[fit_idx]['result']['train score'], 3)
 
         results = {
-            'model': model_name,
             'parameter search time': train_time,
             'training score': train_score,
             'parameters': hyperparams
@@ -208,51 +215,25 @@ class BayesSelector(Selector):
 
         self.X_train = X
         self.y_train = y
-        
-        self.all_frameworks = {'objective':self.objective,'frameworks':[
-        {
-            'name':'XGB',
-            'fn':  partial(self.objective_function, model = self.models['XGB']),
-            'space': self.space_xgb
-        },
-        {
-            'name':'LGBM',
-            'fn': partial(self.objective_function, model = self.models['LGBM']),
-            'space': self.space_lgb
-        },
-        {
-            'name':'CAT',
-            'fn': partial(self.objective_function, model = self.models['CAT']),
-            'space': self.space_cat
-        }
-        ]}
+        trials = Trials()
 
-        results_cumulative = {}
-        for model in self.all_frameworks['frameworks']:
-            print("Training {}".format(model['name']))
-            trials = Trials()
-            hyperparams = fmin(fn = model['fn'], 
+        hyperparams = fmin(fn = self.objective_function, 
                             max_evals = self.max_evals, 
                             trials = trials,
                             algo = tpe.suggest,
-                            space = model['space']
+                            space = bayes_params
                             )
 
-            results = self.org_results(trials.trials, hyperparams, 'XGBoost')
-            results_cumulative[model['name']] = {'score':results['training score'],'params' : results['parameters']}
-
-        best_estimator = {}
-
-        for key in results_cumulative.keys():
-            if best_estimator == {} or results_cumulative[key]['score'] > best_estimator['score']:
-                best_estimator = results_cumulative[key]
-                best_estimator['booster'] = key
+        results = self.org_results(trials.trials, hyperparams)
 
         inable_table = ['n_estimators','max_depth','num_leaves']
         for x in inable_table:
-            if x in best_estimator['params'].keys():
-                best_estimator['params'][x] = int(best_estimator['params'][x])
+            if x in hyperparams.keys():
+                hyperparams[x] = int(hyperparams[x])
 
-        self.best_model = self.models[best_estimator['booster']](**best_estimator['params']) 
+        name = hyperparams['name']
+        del hyperparams['name']
+
+        self.best_model = self.models[name](**hyperparams) 
         self.best_model.fit(X, y)   
         return self
