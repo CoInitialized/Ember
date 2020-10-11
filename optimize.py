@@ -166,22 +166,19 @@ class BayesSelector(Selector):
 
 
     def objective_function(self, space):
-        print(space)
-        input()
+
         inable_table = ['n_estimators','max_depth','num_leaves']
         model = self.models[space['name']]
-        space2 = copy.deepcopy(space)
-        del space2['name']
-
+       
         for x in inable_table:
-            if x in space2.keys():
-                space2[x] = int(space2[x])
+            if x in space.keys():
+                space[x] = int(space[x])
 
         ### TEST IF IT ACTUALLY WORKS
         if isinstance(model, CatBoostClassifier) or isinstance(model, CatBoostRegressor):
-            _model = model(logging_level = 'Silent', **space2)
+            _model = model(logging_level = 'Silent', **space)
         else:
-            _model = model(**space2)
+            _model = model(**space)
 
         _model.fit(self.X_train, self.y_train)
         train_score = self.scoring(self.y_train, _model.predict(self.X_train))
@@ -231,8 +228,11 @@ class BayesSelector(Selector):
             if x in hyperparams.keys():
                 hyperparams[x] = int(hyperparams[x])
 
-        name = hyperparams['name']
-        del hyperparams['name']
+        name = list(hyperparams.keys())[0].split('_')[-1].upper()
+        for key in list(hyperparams.keys()):
+            hyperparams['_'.join(key.split('_')[:-1])] = hyperparams.pop(key)
+
+        del hyperparams['model']
 
         self.best_model = self.models[name](**hyperparams) 
         self.best_model.fit(X, y)   
