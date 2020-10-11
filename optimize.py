@@ -33,7 +33,7 @@ class Selector:
         self.best_model = None
 
     def predict(self, X_test):
-        self.best_model.predict(X_test)
+        return self.best_model.predict(X_test)
 
     def score(self, X, y):
         if self.best_model:
@@ -218,6 +218,7 @@ class BayesSelector(Selector):
                 losses.append(self.loss(y_test, model.predict(X_test)))
                 del model
             loss = sum(losses) / len(losses)
+            _model.fit(self.X_train, self.y_train)
             del losses
         
         elif self.X_test is not None and self.y_test is not None:
