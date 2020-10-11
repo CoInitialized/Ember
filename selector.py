@@ -1,4 +1,8 @@
 from sklearn.base import BaseEstimator, TransformerMixin
+import numpy as np
+import pandas as pd
+
+
 
 class Fraction_Selector(BaseEstimator, TransformerMixin):
 
@@ -49,4 +53,6 @@ class DtypeSelector(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, X, y=None):
+        if isinstance(X, np.ndarray):
+            X = pd.DataFrame(X)
         return X.select_dtypes(include=self.dtype)

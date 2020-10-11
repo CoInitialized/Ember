@@ -95,7 +95,7 @@ bayes_params =  hp.choice('model_type', [
     },
     {
         'name' : 'CAT',
-        'n_estimators': hp.quniform('n_estimators_cat', 50, 1000, 25),
+        'n_estimators': hp.quniform('n_estimators_cat', 50, 1025, 25),
         'learning_rate': hp.loguniform('learning_rate_cat', np.log(0.005), np.log(0.3)),
         'depth': hp.quniform('depth_cat', 1, 16, 1),
         'border_count': hp.quniform('border_count_cat', 30, 220, 5), 
