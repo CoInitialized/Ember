@@ -1,3 +1,4 @@
+from sklearn.experimental import enable_iterative_imputer  # noqa
 from sklearn.impute import SimpleImputer, IterativeImputer, KNNImputer
 from sklearn.base import BaseEstimator, TransformerMixin
 
