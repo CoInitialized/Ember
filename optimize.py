@@ -9,6 +9,22 @@ from search_space import grid_params, bayes_params
 from sklearn.metrics import accuracy_score, r2_score
 from functools import partial
 import copy
+from sklearn.model_selection import KFold
+import catboost
+
+def fix_hyperparams(params):
+    inable_table = ['n_estimators','max_depth','num_leaves']
+    for x in inable_table:
+        if x in params.keys():
+            params[x] = int(params[x])
+
+    outable = ['model_type', 'model','name']
+    for x in outable:
+        if x in params.keys():
+            del params[x] 
+
+    return params
+
 
 class Selector:
 
@@ -27,16 +43,20 @@ class Selector:
 
 
 class GridSelector(Selector):
-    def __init__(self,objective):
+    def __init__(self,objective, steps = 6, folds = 5, scoring = 'auto', n_jobs = -1):
+
         super().__init__(objective)
         self.figures = {}
         self.params = grid_params
+        self.steps = steps
+        self.folds = folds
 
+        self.n_jobs = n_jobs
 
         self.models = {}
         self.best_model = None
         if objective == 'classification':
-            self.scoring = 'accuracy'
+            self.scoring = 'accuracy' if scoring == 'auto' else scoring
             self.models = {
                 "XGB": XGBClassifier,
                 "LGBM": LGBMClassifier,
@@ -44,7 +64,7 @@ class GridSelector(Selector):
             }
            
         elif objective == 'regression':
-            self.scoring = 'r2'
+            self.scoring = 'r2' if scoring == 'auto' else scoring
             self.models = {
                 "XGB": XGBRegressor,
                 "LGBM": LGBMRegressor,
@@ -89,19 +109,18 @@ class GridSelector(Selector):
 
         return fig, axes
 
-    def fit(self,X, y, steps = 6, folds = 2, scoring = 'auto', n_jobs = -1, cv = 2):
+    def fit(self,X, y):
 
         best_score = None
         gcv = 1
-        if scoring == 'auto':
-            scoring = self.scoring
+
         for key in self.params.keys():
             learned_params = {}
             print(f"Searching model for {key}")
-            for i in range(min([steps,len(self.params[key])])):
+            for i in range(min([self.steps,len(self.params[key])])):
                 print(f'step {i}')
                 del gcv
-                gcv = GridSearchCV(estimator = self.models[key](**learned_params), param_grid = self.params[key][i], scoring=scoring, cv=folds, verbose = 0, n_jobs = n_jobs, refit= False if i < (steps - 1) else True)
+                gcv = GridSearchCV(estimator = self.models[key](**learned_params), param_grid = self.params[key][i], scoring=self.scoring, cv=self.folds, verbose = 0, n_jobs =self.n_jobs, refit= False if i < (self.steps - 1) else True)
                 print('fitowanie')
                 gcv.fit(X,y)
                 print('updatowanie')
@@ -130,7 +149,7 @@ class GridSelector(Selector):
         return self
 
 class BayesSelector(Selector):
-    def __init__(self, objective, max_evals):
+    def __init__(self, objective, max_evals, X_test = None, y_test = None, cv = None):
         super().__init__(objective)
         self.space_xgb = bayes_params['XGB']
 
@@ -142,6 +161,14 @@ class BayesSelector(Selector):
         self.objective = objective
         
         self.max_evals = max_evals
+
+        self.X_test = X_test
+        self.y_test = y_test
+        self.cv = cv
+
+        if (X_test is not None) ^ (y_test is not None):
+            raise Exception("You have to provide both X_test and y_test not only one of them!")
+        
 
         if objective == 'classification':
             self.scoring = accuracy_score
@@ -167,23 +194,45 @@ class BayesSelector(Selector):
 
     def objective_function(self, space):
 
-        inable_table = ['n_estimators','max_depth','num_leaves']
+
         model = self.models[space['name']]
-       
-        for x in inable_table:
-            if x in space.keys():
-                space[x] = int(space[x])
+        name = space['name']
+        space = fix_hyperparams(space)
 
         ### TEST IF IT ACTUALLY WORKS
-        if isinstance(model, CatBoostClassifier) or isinstance(model, CatBoostRegressor):
+        if name == 'CAT':
             _model = model(logging_level = 'Silent', **space)
         else:
             _model = model(**space)
 
-        _model.fit(self.X_train, self.y_train)
-        train_score = self.scoring(self.y_train, _model.predict(self.X_train))
+        loss = None
+
+        if self.cv:
+            losses = []
+            kf = KFold(n_splits=self.cv)
+            for train_index, test_index in kf.split(self.X_train):
+                X_train, X_test = self.X_train[train_index], self.X_train[test_index]
+                y_train, y_test = self.y_train[train_index], self.y_train[test_index]
+                model = copy.deepcopy(_model)   
+                model.fit(X_train, y_train)
+                losses.append(self.loss(y_test, model.predict(X_test)))
+                del model
+            loss = sum(losses) / len(losses)
+            del losses
         
-        return {'status': STATUS_OK, 'loss': self.loss(self.y_train, _model.predict(self.X_train)),
+        elif self.X_test is not None and self.y_test is not None:
+            _model.fit(self.X_train, self.y_train)
+            loss = self.loss(self.y_test, _model.predict(self.X_test))
+        
+        else:
+            _model.fit(self.X_train, self.y_train)
+            loss = self.loss(self.y_train, _model.predict(self.X_train))
+        
+
+        train_score = self.scoring(self.y_train, _model.predict(self.X_train))
+
+
+        return {'status': STATUS_OK, 'loss': loss,
                 'train score': train_score
             }
 
@@ -223,16 +272,11 @@ class BayesSelector(Selector):
 
         results = self.org_results(trials.trials, hyperparams)
 
-        inable_table = ['n_estimators','max_depth','num_leaves']
-        for x in inable_table:
-            if x in hyperparams.keys():
-                hyperparams[x] = int(hyperparams[x])
-
         name = list(hyperparams.keys())[0].split('_')[-1].upper()
         for key in list(hyperparams.keys()):
             hyperparams['_'.join(key.split('_')[:-1])] = hyperparams.pop(key)
 
-        del hyperparams['model']
+        hyperparams = fix_hyperparams(hyperparams)
 
         self.best_model = self.models[name](**hyperparams) 
         self.best_model.fit(X, y)   
