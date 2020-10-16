@@ -6,6 +6,8 @@ import pandas as pd
 from category_encoders import TargetEncoder, LeaveOneOutEncoder, WOEEncoder
 
 class Preprocessor:
+    """Class providing way to build multibranch pipelines
+    """
 
 
     def __init__(self):
@@ -16,15 +18,31 @@ class Preprocessor:
 
 
     def add_branch(self, name):
+        """Add new branch to pipeline with selected name
+
+        Args:
+            name (str): name of new branch
+        """
         self.branches[name] = []
 
     def add_transformer_to_branch(self, name, transformer):
+        """Add new transformer to branch of chosen name. If branch doesn't exist, create it and put transformer in it.
+
+        Args:
+            name (str): name of selected branch
+            transformer (Any class deriving from (BaseEstimator, TransformerMixin)): chosen estimator
+        """
         if name in list(self.branches.keys()):
             self.branches[name].append(transformer)
         else:
             self.branches[name] = [transformer]
 
     def merge(self):
+        """Merge branches and return ready-to-fitpipeline
+
+        Returns:
+            FeatureUnion: final pipeline
+        """
         for branch in self.branches.keys():
             self.pipes[branch] = make_pipeline(*self.branches[branch])
         self.union = FeatureUnion([(pipe_name, self.pipes[pipe_name]) for pipe_name in self.pipes.keys()])
@@ -33,13 +51,18 @@ class Preprocessor:
 
 
 class GeneralScaler(BaseEstimator, TransformerMixin):
-    """
-
-        TODO: ADD MORE SCALERS
-
+    """Class wrapping up few scalers for easier use 
     """
 
     def __init__(self, kind):
+        """General Scaler Initializer
+
+        Args:
+            kind (str): string representing scaler type. Can be one of following ('SS' - StandardScaler, 'MMS' -  MinMaxScaler)
+
+        Raises:
+            Exception: Raised if kind not supported.
+        """
 
         if kind == 'SS':
             self.scaler = StandardScaler()
@@ -49,14 +72,31 @@ class GeneralScaler(BaseEstimator, TransformerMixin):
             raise Exception("No such kind of scaler supported! \n Supported kinds: SS MMS")
 
     def fit(self, X, y=None):
+        """Fit scaler
+
+        Args:
+        X : {array-like, sparse matrix}, shape [n_samples, n_features]
+            The data used to fit scaler
+
+        y
+            Ignored
+        """
 
         self.scaler.fit(X)
         return self
 
     def transform(self, X, y=None):
+        """Transform data by fitted scaler
+
+        Args:
+        X : {array-like, sparse matrix}, shape [n_samples, n_features]
+            The data to be transformed
+
+        y
+            Ignored
+        """
 
         return self.scaler.transform(X)
-
 
 class MultiColumnTransformer(BaseEstimator, TransformerMixin):
 
