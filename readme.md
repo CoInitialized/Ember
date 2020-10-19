@@ -1,4 +1,4 @@
-# Bachelors degree project - Automated Gradient Boosting Framework
+# Ember - Automated Gradient Boosting Framework
 
 - [Bachelors degree project - Automated Gradient Boosting Framework](#bachelors-degree-project---automated-gradient-boosting-framework)
   - [What is it?](#what-is-it)
