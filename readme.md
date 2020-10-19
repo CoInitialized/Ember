@@ -5,11 +5,11 @@
   - [How to use it?](#how-to-use-it)
 
 
-
+Work still in progress
 
 ## What is it?
 
-This project is basically wrapper for popular ML libraries like:
+This allows user for fast creation of automatic ML pipelines with uses or libraries like:
 
 - Scikit-learn
 - Category encoders
