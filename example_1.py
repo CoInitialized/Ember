@@ -1,11 +1,11 @@
-from preprocessing import Preprocessor
-from selector import DtypeSelector
-from optimize import GridSelector, BayesSelector
+from ember.preprocessing import Preprocessor
+from ember.utils import DtypeSelector
+from ember.optimize import GridSelector, BayesSelector
 from sklearn.pipeline import make_pipeline
 import pandas as pd
 import numpy as np
-from missing import GeneralImputer
-from preprocessing import GeneralEncoder
+from ember.missing import GeneralImputer
+from ember.preprocessing import GeneralEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
@@ -34,4 +34,4 @@ model = GridSelector('classification')
 clf_pipe = make_pipeline(final, model) 
 clf_pipe.fit(X_train, y_train)
 
-print(accuracy_score(y_test, clf_pipe_2.predict(X_test)))
+print(accuracy_score(y_test, clf_pipe.predict(X_test)))

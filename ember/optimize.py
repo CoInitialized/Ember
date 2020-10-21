@@ -5,7 +5,7 @@ from catboost import CatBoostClassifier, CatBoostRegressor
 from lightgbm import LGBMClassifier, LGBMRegressor
 from sklearn.model_selection import GridSearchCV, train_test_split
 from hyperopt import hp, tpe, Trials, STATUS_OK, fmin
-from search_space import grid_params, bayes_params
+from .search_space import grid_params, bayes_params
 from sklearn.metrics import accuracy_score, r2_score
 from functools import partial
 import copy
