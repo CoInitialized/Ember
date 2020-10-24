@@ -5,6 +5,9 @@ import pandas as pd
 
 
 class Fraction_Selector(BaseEstimator, TransformerMixin):
+    """ Useful transformer selecting and returning only columns having less than specified percentage of missing values
+
+    """
 
     @staticmethod
     def select_by_fraction_missing(X, fraction: float, inplace : bool = False, ignored_columns = None):

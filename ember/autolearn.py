@@ -17,8 +17,8 @@ class Learner:
             objective (str): either 'classification' or 'regression'
             frame (pandas.DataFrame, optional): Dataframe with data. If not provided X has to be provided. Defaults to None.
             target (pandas.Series, optional): Series with labels. If not provided y has to be provided. Defaults to None.
-            X (numpy.ndarray, optional), shape [n_samples, n_features]: Array with features. If not provided gframe has to be provided. Defaults to None.
-            y (numpy.ndarray, optional), shape [n_samples,]: Array with labels. If not provided target has to be provided. Defaults to None.
+            X (numpy.ndarray, pandas.DataFrame, optional), shape [n_samples, n_features]: Array with features. If not provided gframe has to be provided. Defaults to None.
+            y (numpy.ndarray, pandas.Series, optional), shape [n_samples,]: Array with labels. If not provided target has to be provided. Defaults to None.
 
         Raises:
             Exception: Unsupported objective    
@@ -91,6 +91,20 @@ class Learner:
         self.target_preprocessor = target_preprocessor.merge()
 
     def fit(self, speed = 'fast', optimizer = 'grid', X_test = None, y_test = None, cv = 5):
+        """Fit the model acording to training data
+
+        Args:
+            speed (str or int, optional): Either 'fast', 'medium' or 'slow' or int number. Specifies how many iterations will be performed. Defaults to 'fast'.
+            optimizer (str, optional): Whether to use 'grid' or 'bayes' optimization. Defaults to 'grid'.
+            X_test (numpy.ndarray, pandas.DataFrame, optional), shape [n_samples, n_features]: Test array with features. Defaults to None.
+            y_test (numpy.ndarray, pandas.Series, optional), shape [n_samples,]: Test array with labels. Defaults to None.
+            cv (int, optional): Number of cross validation folds. Defaults to 5.
+
+        Raises:
+            Exception: Wrong speed parameter value
+            Exception: Wrong optimizer value
+
+        """
         model = None
         if optimizer == 'bayes':
             if speed == 'fast':
@@ -127,6 +141,15 @@ class Learner:
         return self
 
     def predict(self, X):
+        """Preform prediction on samples in X
+
+        Args:
+             X : {array-like, sparse matrix} of shape (n_samples, n_features)
+    
+        Returns:
+            y_pred : ndarray of shape (n_samples,)
+                Labels for samples in X.
+        """
 
         return self.model.predict(X)
 

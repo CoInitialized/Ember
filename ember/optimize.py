@@ -5,7 +5,7 @@ from catboost import CatBoostClassifier, CatBoostRegressor
 from lightgbm import LGBMClassifier, LGBMRegressor
 from sklearn.model_selection import GridSearchCV, train_test_split
 from hyperopt import hp, tpe, Trials, STATUS_OK, fmin
-from .search_space import grid_params, bayes_params
+from .search_space import grid_params, get_bayes_params
 from sklearn.metrics import accuracy_score, r2_score
 from functools import partial
 import copy
@@ -13,6 +13,8 @@ from sklearn.model_selection import KFold
 import catboost
 
 def fix_hyperparams(params):
+    """Helper function to be removed and solved with better search spaces definitions
+    """
     inable_table = ['n_estimators','max_depth','num_leaves']
     for x in inable_table:
         if x in params.keys():
@@ -27,15 +29,42 @@ def fix_hyperparams(params):
 
 
 class Selector:
+    """Base class for optimizer
+    """
 
     def __init__(self, objective):
+        """Optimizer initializer
+
+        Args:
+            objective (str): Either 'classification' or 'regression'
+        """
         self.objective = objective
         self.best_model = None
 
     def predict(self, X_test):
+        """Perform prediction on data X_test
+
+        Args:
+            X_test : {array-like, sparse matrix} of shape (n_samples, n_features)
+
+        Returns:
+            [type]: [description]
+        """
         return self.best_model.predict(X_test)
 
     def score(self, X, y):
+        """[summary]
+
+        Args:
+            X : {array-like, sparse matrix} of shape (n_samples, n_features)
+            y ([type]): [description]
+
+        Raises:
+            Exception: [description]
+
+        Returns:
+            [type]: [description]
+        """
         if self.best_model:
             return self.best_model.score(X,y)
         else:
@@ -110,12 +139,23 @@ class GridSelector(Selector):
         return fig, axes
 
     def fit(self,X, y):
+        """[summary]
+
+        Args:
+            X : {array-like, sparse matrix} of shape (n_samples, n_features)
+            y ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
 
         best_score = None
         gcv = 1
 
         for key in self.params.keys():
             learned_params = {}
+            if key == 'CAT':
+                learned_params['logging_level'] = 'Silent'
             print(f"Searching model for {key}")
             for i in range(min([self.steps,len(self.params[key])])):
                 print(f'step {i}')
@@ -149,19 +189,26 @@ class GridSelector(Selector):
         return self
 
 class BayesSelector(Selector):
-    def __init__(self, objective, max_evals, X_test = None, y_test = None, cv = None):
+    def __init__(self, objective, max_evals, X_test = None, y_test = None, cv = None, **kwargs):
+        """[summary]
+
+        Args:
+            objective (str): Either 'classification' or 'regression'
+            max_evals ([type]): Number of optimization steps
+            X_test : {array-like, sparse matrix} of shape (n_samples, n_features). Optional. Defaults to None.
+            y_test : array-like of shape (n_samples,), Target values 
+            cv (int, optional): Number of cross validation folds. Defaults to None.
+
+        Raises:
+            Exception: [description]
+            Exception: [description]
+        """
         super().__init__(objective)
-        self.space_xgb = bayes_params['XGB']
 
 
-        self.space_lgb = bayes_params['LGBM']
-
-        self.space_cat = bayes_params['CAT']
-
-        self.objective = objective
-        
+        self.objective = objective  
         self.max_evals = max_evals
-
+        self.kwargs = kwargs
         self.X_test = X_test
         self.y_test = y_test
         self.cv = cv
@@ -193,6 +240,8 @@ class BayesSelector(Selector):
 
 
     def objective_function(self, space):
+        """Function to be optimized
+        """
 
 
         model = self.models[space['name']]
@@ -240,6 +289,7 @@ class BayesSelector(Selector):
     
 
     def org_results(self,trials, hyperparams):
+
         fit_idx = -1
         for idx, fit  in enumerate(trials):
             hyp = fit['misc']['vals']
@@ -259,6 +309,15 @@ class BayesSelector(Selector):
         return results
 
     def fit(self, X, y):
+        """Fit the and optimize model according to the given training data.
+
+        Args:
+            X : {array-like, sparse matrix} of shape (n_samples, n_features)
+            y : array-like of shape (n_samples,), Target values 
+
+        Returns:
+            self: object
+        """
 
         self.X_train = X
         self.y_train = y
@@ -268,7 +327,7 @@ class BayesSelector(Selector):
                             max_evals = self.max_evals, 
                             trials = trials,
                             algo = tpe.suggest,
-                            space = bayes_params
+                            space = get_bayes_params(**self.kwargs)
                             )
 
         results = self.org_results(trials.trials, hyperparams)

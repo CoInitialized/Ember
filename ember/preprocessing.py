@@ -94,6 +94,9 @@ class GeneralScaler(BaseEstimator, TransformerMixin):
 
         y
             Ignored
+        
+        Returns:
+            Transformed data
         """
 
         return self.scaler.transform(X)
@@ -101,12 +104,16 @@ class GeneralScaler(BaseEstimator, TransformerMixin):
 class MultiColumnTransformer(BaseEstimator, TransformerMixin):
 
     """
-
-        Uogolnienie transformatorow dla wielu kolumn jesli potrafią zadzialac tylko na jedną, jak np. label encoder
-
+        Transformer generalization for many columns. Used to fit the same transformer for each individual column
     """
 
     def __init__(self, transformer, match_col_names = False, **kwargs):
+        """Transformer initializer
+
+        Args:
+            transformer (class): Transformed to be used
+            match_col_names (bool, optional): If fitting on dataframe this argument ensures that also column names match, not only indices. Defaults to False.
+        """
         self.transformer = transformer
         self.kwargs = kwargs
         self.match_col_names = match_col_names
@@ -116,12 +123,21 @@ class MultiColumnTransformer(BaseEstimator, TransformerMixin):
     def __getitem__(self, index):
         return self.transformers[index]
 
-
     def fit(self, X, y = None):
-        """
-            Jesli podajemy numpy array to w przypadku podania jednej kolumny, array musi być w postanci (-1,1) - tzn. dwuwymiarowy
+        """Fit transformer on given data
 
+        Args:
+            X (pandas.Dataframe or numpy.array, shape [n_samples, n_features]): The data used to fit transformer. 
+            y:
+                Ignored
+
+        Raises:
+            Exception: Unsupported data structure
+
+        Returns:
+            [type]: [description]
         """
+  
         if isinstance(X, pd.DataFrame):
             self.columns =  list(X.columns)
         elif isinstance(X, np.ndarray):
@@ -132,7 +148,7 @@ class MultiColumnTransformer(BaseEstimator, TransformerMixin):
                 raise Exception("Unsupported data structure. Provided structure should be two-dimentional. In case if your data is single column reshape it to (-1,1)")
 
         else:
-            raise Exception("Unsupported data structure. Use pandas dataframe or 2-dim numpy array instea")
+            raise Exception("Unsupported data structure. Use pandas dataframe or 2-dim numpy array instead")
 
         self.transformers = [self.transformer(**self.kwargs) for i in range(len(self.columns))]
 
@@ -144,6 +160,20 @@ class MultiColumnTransformer(BaseEstimator, TransformerMixin):
         return self
     
     def transform(self, X, y = None):
+        """Transform each column with corresponding transformer
+
+        Args:
+            X (pandas.Dataframe or numpy.array, shape [n_samples, n_features]): The data to be transformed matching fitted structure. 
+            y:
+                Ignored
+
+        Raises:
+            Exception: Unsupported data structure
+            Exception: Enexpected shape of return from one of transformers
+
+        Returns:
+            Transformed data
+        """
 
         if isinstance(X, pd.DataFrame):
             if self.match_col_names and self.columns != list(X.columns):
@@ -181,22 +211,20 @@ class MultiColumnTransformer(BaseEstimator, TransformerMixin):
 
 
 class GeneralEncoder(BaseEstimator, TransformerMixin):
-
-    """
-        Do implementacji:
-
-        Label Encoding
-        One-Hot encoding
-        Target encoding
-        Leave-one-out encoding
-        Weight of Evidence
-
-
+    """Class wrapping up few encoders for easier use 
     """
 
 
 
     def __init__(self, kind, **kwargs):
+        """Encoder initializer
+
+        Args:
+            kind (str): Either 'OHE' (One hot encoder), 'TE' (Target encoder),'LOOE' (Leave one out encoder),'WOE' (Weigth of evidence encoder) or 'LE' (Label encoder)
+
+        Raises:
+            Exception: Encoder type not supported
+        """
         self.kind = kind
         if kind not in ['OHE','TE','LOOE','WOE', 'LE']:
             raise Exception("Encoder type not supported, choose one of ('OHE','TE','LOOE','WOE', 'LE')")
@@ -213,6 +241,16 @@ class GeneralEncoder(BaseEstimator, TransformerMixin):
                 self.encoder = MultiColumnTransformer(LabelEncoder)
 
     def fit(self, X, y = None):
+        """Fit encoder with data X
+
+        Args:
+            X : {array-like, sparse matrix} of shape (n_samples, n_features)
+            y :
+                Ignored
+
+        Returns:
+            self : object
+        """
         if isinstance(self.encoder, OneHotEncoder):
             self.encoder.fit(X)
         else:
@@ -221,6 +259,16 @@ class GeneralEncoder(BaseEstimator, TransformerMixin):
         return self
 
     def transform(self, X, y = None):
+        """Transforms data
+
+        Args:
+            X : {array-like, sparse matrix} of shape (n_samples, n_features)
+            y :
+                Ignored
+
+        Returns:
+            Transformed data
+        """
         return self.encoder.transform(X)
 
 
