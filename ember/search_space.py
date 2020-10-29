@@ -68,7 +68,7 @@ grid_params = {
                 ],
             }
 
-def get_bayes_params(cat = True, xgb = True, lgbm = True):
+def get_bayes_params(cat = True, xgb = True, lgbm = True, **kwargs):
     """Return list of grids for specified gradient boosting libraries
 
     Args:

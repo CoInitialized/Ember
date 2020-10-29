@@ -1,10 +1,10 @@
-from preprocessing import Preprocessor, GeneralEncoder, GeneralScaler
+from .preprocessing import Preprocessor, GeneralEncoder, GeneralScaler
 import pandas as pd
 import numpy as np
-from impute import GeneralImputer
-from optimize import GridSelector, BayesSelector
+from .impute import GeneralImputer
+from .optimize import GridSelector, BayesSelector
 from sklearn.pipeline import make_pipeline
-from selector import DtypeSelector
+from .utils import DtypeSelector
 
 
 class Learner:
@@ -56,13 +56,13 @@ class Learner:
 
         if self.y.dtype == np.object:
 
-            target_preprocessor.add_transformer_to_branch('target', GeneralImputer('simple', 'most_frequent'))
+            target_preprocessor.add_transformer_to_branch('target', GeneralImputer('Simple', 'most_frequent'))
             target_preprocessor.add_transformer_to_branch('target', GeneralEncoder('LE'))
         else:
             if self.objective == 'classification':
-                target_preprocessor.add_transformer_to_branch('target', GeneralImputer('simple', 'most_frequent'))
+                target_preprocessor.add_transformer_to_branch('target', GeneralImputer('Simple', 'most_frequent'))
             elif self.objective == 'regression':
-                target_preprocessor.add_transformer_to_branch('target', GeneralImputer('simple', 'mean'))
+                target_preprocessor.add_transformer_to_branch('target', GeneralImputer('Simple', 'mean'))
             else:
                 pass
                 
@@ -70,17 +70,17 @@ class Learner:
 
         feature_preprocessor = Preprocessor()
 
-        is_number = np.vectorize(lambda x: np.issubdtype(x, np.number))
-        is_object = np.vectorize(lambda x: np.issubdtype(x, np.object))
+        is_number = len(X.select_dtypes(include=np.number).columns.tolist()) > 0
+        is_object = len(X.select_dtypes(include=np.object).columns.tolist()) > 0
 
-        if is_object(X.dtypes).any():
+        if is_object:
             feature_preprocessor.add_branch("categorical")
             feature_preprocessor.add_transformer_to_branch("categorical", DtypeSelector(np.object))
             feature_preprocessor.add_transformer_to_branch("categorical", GeneralImputer('Simple', strategy='most_frequent'))
             feature_preprocessor.add_transformer_to_branch("categorical", GeneralEncoder(kind = 'TE'))
 
 
-        if is_number(X.dtypes).any():
+        if is_number:
             feature_preprocessor.add_branch('numerical')
             feature_preprocessor.add_transformer_to_branch("numerical", DtypeSelector(np.number))
             feature_preprocessor.add_transformer_to_branch("numerical", GeneralImputer('Simple'))
@@ -90,7 +90,7 @@ class Learner:
         self.feature_preprocessor = feature_preprocessor.merge()
         self.target_preprocessor = target_preprocessor.merge()
 
-    def fit(self, speed = 'fast', optimizer = 'grid', X_test = None, y_test = None, cv = 5):
+    def fit(self, speed = 'fast', optimizer = 'grid', X_test = None, y_test = None, cv = 5, **kwargs):
         """Fit the model acording to training data
 
         Args:
@@ -108,13 +108,13 @@ class Learner:
         model = None
         if optimizer == 'bayes':
             if speed == 'fast':
-                model = BayesSelector(self.objective, 10, X_test, y_test, cv)
+                model = BayesSelector(self.objective, 10, X_test, y_test, cv, **kwargs)
             elif speed == 'medium':
-                model = BayesSelector(self.objective, 35, X_test, y_test, cv)
+                model = BayesSelector(self.objective, 35, X_test, y_test, cv, **kwargs)
             elif speed == 'slow':
-                model = BayesSelector(self.objective, 100, X_test, y_test, cv)
+                model = BayesSelector(self.objective, 100, X_test, y_test, cv, **kwargs)
             elif isinstance(speed, int):
-                model = BayesSelector(self.objective, speed, X_test, y_test, cv)
+                model = BayesSelector(self.objective, speed, X_test, y_test, cv, **kwargs)
             else:
                 raise Exception("Speed specifier not supported")
         elif optimizer == 'grid':
