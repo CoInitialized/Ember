@@ -24,7 +24,7 @@ class GeneralImputer(BaseEstimator, TransformerMixin):
             self.imputer = IterativeImputer()
         elif kind == 'KNN':
             self.imputer = KNNImputer()
-        elif == 'Indicate':
+        elif kind == 'Indicate':
             self.imputer = SimpleImputer(strategy='constant', fill_value=0, add_indicator=True)
 
 
