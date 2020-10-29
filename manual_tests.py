@@ -1,3 +1,5 @@
+from catboost import CatBoostClassifier
+from xgboost import XGBClassifier
 from ember.preprocessing import Preprocessor
 from ember.utils import DtypeSelector
 from ember.optimize import GridSelector, BayesSelector
@@ -8,6 +10,7 @@ from ember.impute import GeneralImputer
 from ember.preprocessing import GeneralEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
+import time
 
 datset_classification = r'Ember\datasets\classification\autos.csv'
 
@@ -29,9 +32,16 @@ preprocessor.add_transformer_to_branch("categorical", GeneralEncoder(kind = 'LE'
 
 final = preprocessor.merge()
 
-model = GridSelector('classification')
-
+test = time.time()
+# model = CatBoostClassifier(iterations = 1000, border_count = 350.0 ,logging_level='Silent')
+# model = XGBClassifier(n_estimators=500) # 0.7884
+# model = BayesSelector(objective = 'classification', X_test=final.fit(X_train).transform(X_test), y_test = y_test, max_evals = 100, cat = False)
+model = BayesSelector(objective = 'classification', max_evals = 10, cat = False)
 clf_pipe = make_pipeline(final, model) 
 clf_pipe.fit(X_train, y_train)
 
 print(accuracy_score(y_test, clf_pipe.predict(X_test)))
+
+print(time.time() - test)
+
+print(model.get_params())
