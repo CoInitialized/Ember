@@ -3,8 +3,8 @@
 - [Ember - Automated Gradient Boosting Framework](#ember---automated-gradient-boosting-framework)
   - [What is it](#what-is-it)
   - [How to use it](#how-to-use-it)
-    - [Submodules example:](#submodules-example)
-    - [Automatic learner example](#automatic-learner-example)
+    - [<b>Submodules example</b>:](#bsubmodules-exampleb)
+    - [<b>Automatic learner example</b>](#bautomatic-learner-exampleb)
   - [Further plans](#further-plans)
 
 
@@ -39,9 +39,9 @@ To your disposal are:
 
 ## How to use it
 
+Currently you need to clone the repository or download it as zip and then include the code in project manually. It should change soon so you will be able to use PyPi package.
 
-
-### Submodules example:
+### <b>Submodules example</b>:
 
 In most cases you would like to use independent modules for quickly assembling your model.
 This process is inspired by the way [keras](https://keras.io/) works.
@@ -88,7 +88,7 @@ print(accuracy_score(y_test, clf_pipe.predict(X_test)))
 
 As you can see creating whole pipeline is very simple. If you were to skip imports it would be many times shorter than equivalent written in standard way.
 
-### Automatic learner example
+### <b>Automatic learner example</b>
 
 You also have an option to completely automate the process. In this case you can use ``Learner`` class from [autolearn](ember/autolearn.py) module.
 
@@ -121,6 +121,7 @@ The way ``Learner`` creates and optimizes model can be controlled by providing d
 - Extend optimization module so it can be used in more general cases
 - Build visualization module
 - Build automatic dashboard
+- <b>Publish as PyPi package</b>
 
 
 
