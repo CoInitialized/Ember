@@ -9,9 +9,9 @@ from ember.preprocessing import GeneralEncoder
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
-datset_classification = r'Ember\datasets\classification\autos.csv'
+dataset_classification = r'Ember\datasets\classification\autos.csv'
 
-data = pd.read_csv(datset_classification)
+data = pd.read_csv(dataset_classification)
 
 X, y = data.drop(columns = ['class']), data['class']
 X_train, X_test, y_train, y_test = train_test_split(X, y, stratify = y, random_state = 42)
