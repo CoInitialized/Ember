@@ -11,6 +11,13 @@ from functools import partial
 import copy
 from sklearn.model_selection import KFold
 import catboost
+from skopt.plots import plot_convergence
+from skopt.callbacks import DeltaYStopper
+from skopt.space import Real, Integer
+from skopt.utils import use_named_args
+from skopt import gp_minimize
+from functools import partial
+from .search_space import get_baesian_space
 
 def fix_hyperparams(params):
     """Helper function to be removed and solved with better search spaces definitions
@@ -29,7 +36,8 @@ def fix_hyperparams(params):
 
 
 class Selector:
-    """Base class for optimizer
+    """
+        Base class for optimizer
     """
 
     def __init__(self, objective):
@@ -48,22 +56,22 @@ class Selector:
             X_test : {array-like, sparse matrix} of shape (n_samples, n_features)
 
         Returns:
-            [type]: [description]
+            array-like of shape = [n_samples] or shape = [n_samples, n_classes: The predicted values
         """
         return self.best_model.predict(X_test)
 
     def score(self, X, y):
-        """[summary]
-
+        """Return the mean accuracy on the given test data and labels in case of classification
+         or the coefficient of determination R^2 of the prediction in case of regression.
         Args:
             X : {array-like, sparse matrix} of shape (n_samples, n_features)
-            y ([type]): [description]
+            y array-like of shape (n_samples,) or (n_samples, n_outputs): True values for X.
 
         Raises:
-            Exception: [description]
+            Exception: Exception raised when no best model has been created, check if you have used fit function 
 
         Returns:
-            [type]: [description]
+            float: score of the model
         """
         if self.best_model:
             return self.best_model.score(X,y)
@@ -73,7 +81,18 @@ class Selector:
 
 class GridSelector(Selector):
     def __init__(self,objective, steps = 6, folds = 5, scoring = 'auto', n_jobs = -1):
+        """ Class performing CV search in order to find best model
 
+        Args:
+            objective string: either regression or classification, will decide which version of alghoritm to use
+            steps (int, optional): Determines how many parameters will be searched for a given model. Defaults to 6.
+            folds (int, optional): Determines how many folds to use during the process of cross-validation. Defaults to 5.
+            scoring (str, optional): Determines which kind of scoring to use. Defaults to 'auto'.
+            n_jobs (int, optional): Determines how many threads will be used during search. Defaults to -1.
+
+        Raises:
+            Exception: Exception thrown if unknown objective will be used
+        """
         super().__init__(objective)
         self.figures = {}
         self.params = grid_params
@@ -139,14 +158,14 @@ class GridSelector(Selector):
         return fig, axes
 
     def fit(self,X, y):
-        """[summary]
+        """ Build a model from the training set (X, y).
 
         Args:
             X : {array-like, sparse matrix} of shape (n_samples, n_features)
-            y ([type]): [description]
+            y array-like of shape = [n_samples]: The target values (class labels in classification, real numbers in regression).
 
         Returns:
-            [type]: [description]
+            object: Returns self.
         """
 
         best_score = None
@@ -190,7 +209,7 @@ class GridSelector(Selector):
 
 class BayesSelector(Selector):
     def __init__(self, objective, max_evals, X_test = None, y_test = None, cv = None, **kwargs):
-        """[summary]
+        """Class performing bayesian search based on hyperopt in order to find best model
 
         Args:
             objective (str): Either 'classification' or 'regression'
@@ -200,8 +219,8 @@ class BayesSelector(Selector):
             cv (int, optional): Number of cross validation folds. Defaults to None.
 
         Raises:
-            Exception: [description]
-            Exception: [description]
+            Exception: Exception thrown when only one of X_test and y_test is provided
+            Exception: Exception thrown if unknown objective will be used
         """
         super().__init__(objective)
 
@@ -228,7 +247,7 @@ class BayesSelector(Selector):
            
         elif objective == 'regression':
             self.scoring = r2_score
-            self.loss = lambda y_true, y_pred, : (-1 * self.scoring(y_true, y_pred))
+            self.loss = lambda y_true, y_pred, : 1 + (-1 * self.scoring(y_true, y_pred))
             self.models = {
                 "XGB": XGBRegressor,
                 "LGBM": LGBMRegressor,
@@ -341,3 +360,130 @@ class BayesSelector(Selector):
         self.best_model = self.models[name](**hyperparams) 
         self.best_model.fit(X, y)   
         return self
+
+class BaesianSklearnSelector(Selector):
+    def __init__(self, objective, max_evals, X_test = None, y_test = None, cv = None, **kwargs):
+        """Class performing bayesian search based on skopt in order to find best model
+
+        Args:
+            objective (str): Either 'classification' or 'regression'
+            max_evals ([type]): Number of optimization steps
+            X_test : {array-like, sparse matrix} of shape (n_samples, n_features). Optional. Defaults to None.
+            y_test : array-like of shape (n_samples,), Target values 
+            cv (int, optional): Number of cross validation folds. Defaults to None.
+
+        Raises:
+            Exception: Exception thrown when only one of X_test and y_test is provided
+            Exception: Exception thrown if unknown objective will be used
+        """
+        
+        super().__init__(objective)
+        self.objective = objective  
+        self.max_evals = max_evals
+        self.model = None
+        self.kwargs = kwargs
+        self.X_test = X_test
+        self.y_test = y_test
+        self.cv = cv
+        self.space = None
+        self.best_score = None
+        if (self.X_test is not None) ^ (self.y_test is not None):
+                raise Exception("You have to provide both X_test and y_test not only one of them!")
+            
+
+        if objective == 'classification':
+            self.scoring = accuracy_score
+            self.loss = lambda y_true, y_pred: 1 - self.scoring(y_true, y_pred)
+            self.models = {
+                "XGB": XGBClassifier,
+                "LGBM": LGBMClassifier,
+                "CAT": CatBoostClassifier
+            }
+        
+        elif objective == 'regression':
+            self.scoring = r2_score
+            self.loss = lambda y_true, y_pred, : 1 + (-1 * self.scoring(y_true, y_pred))
+            self.models = {
+                "XGB": XGBRegressor,
+                "LGBM": LGBMRegressor,
+                "CAT": CatBoostRegressor
+
+            }
+        else: 
+            raise Exception("Unknown objective, choose classification or regression")
+
+
+    def objectivefunc(self,model_key,names,listofparams):
+        """Function to be optimized
+        """
+        ### TEST IF IT ACTUALLY WORKS
+        params = {}
+        for name,param in zip(names,listofparams):
+            params[name] = param
+        if model_key == 'CAT':
+            params['logging_level'] = 'Silent'
+        _model = self.model(**params)
+
+        loss = None
+
+        if self.cv:
+            losses = []
+            kf = KFold(n_splits=self.cv)
+            for train_index, test_index in kf.split(self.X_train):
+                X_train, X_test = self.X_train[train_index], self.X_train[test_index]
+                y_train, y_test = self.y_train[train_index], self.y_train[test_index]
+                model = copy.deepcopy(_model)   
+                model.fit(X_train, y_train)
+                losses.append(self.loss(y_test, model.predict(X_test)))
+                del model
+            loss = sum(losses) / len(losses)
+            _model.fit(self.X_train, self.y_train)
+            del losses
+        
+        elif self.X_test is not None and self.y_test is not None:
+            _model.fit(self.X_train, self.y_train)
+            loss = self.loss(self.y_test, _model.predict(self.X_test))
+        
+        else:
+            _model.fit(self.X_train, self.y_train)
+            loss = self.loss(self.y_train, _model.predict(self.X_train))
+
+        score = _model.score(self.X_train, self.y_train)
+        #print(score)
+        if self.best_score == None or score < self.best_score:
+            self.best_model = copy.deepcopy(_model)
+            self.best_score = loss
+        del _model
+        return loss
+
+    def fit(self, X, y):
+        """Fit the and optimize model according to the given training data.
+
+        Args:
+            X : {array-like, sparse matrix} of shape (n_samples, n_features)
+            y : array-like of shape (n_samples,), Target values 
+
+        Returns:
+            self: object
+        """
+
+        self.X_train = X
+        self.y_train = y
+        results = []
+        for key in list(self.models.keys()):
+            print(key)
+            self.model = self.models[key]
+            names = [x.name for x in get_baesian_space()[key]]
+            res_gp = gp_minimize(
+                                    partial(self.objectivefunc,key,names),
+                                    get_baesian_space()[key],
+                                    n_calls=self.max_evals,
+                                    random_state=0,
+                                    callback=DeltaYStopper(0.001)
+                                )       
+            results.append((key,res_gp))
+        fig, ax = plt.subplots()
+        plot= plot_convergence(*results,ax=ax);
+        return fig,results,self.best_model
+
+
