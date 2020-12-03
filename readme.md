@@ -116,7 +116,6 @@ The way ``Learner`` creates and optimizes model can be controlled by providing d
 
 ## Further plans
 
-- Change optimization engine to [skopt](https://scikit-optimize.github.io/stable/) or [optuna](https://optuna.readthedocs.io/en/stable/) as they seem to be better fit to this project
 - More clearly comment modules - closer following [sklearn docs](https://scikit-learn.org/stable/modules/classes.html) convention
 - Extend optimization module so it can be used in more general cases
 - Build visualization module
