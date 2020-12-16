@@ -114,6 +114,14 @@ print(r2_score(y_test, results))
 
 The way ``Learner`` creates and optimizes model can be controlled by providing different hyperparameters to its ``fit()`` method.
 
+### <b>Web-based GUI for AutoML functionality</b>
+If you wish to use Embers AutoML functionality in your web browser, you can run command:
+```
+streamlit run streamlit_app.py
+```
+It will open server on localhost with simple application providing beforementioned functionality.
+
+
 ## Further plans
 
 - More clearly comment modules - closer following [sklearn docs](https://scikit-learn.org/stable/modules/classes.html) convention
