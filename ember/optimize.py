@@ -179,7 +179,8 @@ class GridSelector(Selector):
             for i in range(min([self.steps,len(self.params[key])])):
                 print(f'step {i}')
                 del gcv
-                gcv = GridSearchCV(estimator = self.models[key](**learned_params), param_grid = self.params[key][i], scoring=self.scoring, cv=self.folds, verbose = 0, n_jobs =self.n_jobs, refit= False if i < (self.steps - 1) else True)
+                refit_bool = False if i < (min([self.steps,len(self.params[key])-1]) - 1) else True
+                gcv = GridSearchCV(estimator = self.models[key](**learned_params), param_grid = self.params[key][i], scoring=self.scoring, cv=self.folds, verbose = 0, n_jobs =self.n_jobs, refit= refit_bool)
                 print('fitowanie')
                 gcv.fit(X,y)
                 print('updatowanie')
