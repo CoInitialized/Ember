@@ -39,7 +39,7 @@ class Learner:
 
         elif frame is not None and target is not None:
             self.X = frame.drop(columns = [target])
-            self.y = frame['target']
+            self.y = frame[target]
         else:
             raise Exception("Not enough data provided, provide frame and target or X and y")
 
@@ -70,8 +70,8 @@ class Learner:
 
         feature_preprocessor = Preprocessor()
 
-        is_number = len(X.select_dtypes(include=np.number).columns.tolist()) > 0
-        is_object = len(X.select_dtypes(include=np.object).columns.tolist()) > 0
+        is_number = len(self.X.select_dtypes(include=np.number).columns.tolist()) > 0
+        is_object = len(self.X.select_dtypes(include=np.object).columns.tolist()) > 0
 
         if is_object:
             feature_preprocessor.add_branch("categorical")
