@@ -119,13 +119,13 @@ class Learner:
                 raise Exception("Speed specifier not supported")
         elif optimizer == 'grid':
             if speed == 'fast':
-                model = GridSelector(self.objective, 2, folds = cv)
+                model = GridSelector(self.objective, 2, folds = cv, **kwargs)
             elif speed == 'medium':
-                model = GridSelector(self.objective, 4, folds = cv)
+                model = GridSelector(self.objective, 4, folds = cv, **kwargs)
             elif speed == 'slow':
-                model = GridSelector(self.objective, 6, folds = cv)
+                model = GridSelector(self.objective, 6, folds = cv, **kwargs)
             elif isinstance(speed, int):
-                model = GridSelector(self.objective, speed, folds = cv)
+                model = GridSelector(self.objective, speed, folds = cv, **kwargs)
             else:
                 raise Exception("Speed specifier not supported")
         else:

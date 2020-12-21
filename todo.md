@@ -4,6 +4,7 @@
 
 - Pipeline z podaniem testowego setu musi mieć prostszą opcje niż fitowanie wstępne.
 - Optimizer powinien działać też dla innych algorytmów, oparty na gridzie i bayesie
+- Autolearn nie pozwala na wybranie metryki
 
 ## Front
 
