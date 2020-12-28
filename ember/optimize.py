@@ -215,9 +215,16 @@ class GridSelector(Selector):
             del learned_params
             
             np.random.seed(200)
-            kf = StratifiedKFold(n_splits=self.folds)
+            if self.objective == 'classification':
+                kf = StratifiedKFold(n_splits=self.folds)
+                split = kf.split(X, y)
+            else:
+                kf = KFold(n_splits=self.folds)
+                split = kf.split(X)
+
+            
             scores = []
-            for train_index, test_index in kf.split(X, y):
+            for train_index, test_index in split:
                 X_train, X_test = X[train_index], X[test_index]
                 y_train, y_test = y[train_index], y[test_index]
                 if key == 'CAT':
@@ -317,8 +324,15 @@ class BayesSelector(Selector):
         if self.cv:
             losses = []
             np.random.seed(200)
-            kf = StratifiedKFold(n_splits=self.cv)
-            for train_index, test_index in kf.split(self.X_train, self.y_train):
+
+            if self.objective == 'classification':
+                kf = StratifiedKFold(n_splits=self.cv)
+                split = kf.split(self.X_train, self.y_train)
+            else:
+                kf = KFold(n_splits=self.cv)
+                split = kf.split(self.X_train)
+                
+            for train_index, test_index in split:
                 X_train, X_test = self.X_train[train_index], self.X_train[test_index]
                 y_train, y_test = self.y_train[train_index], self.y_train[test_index]
                 model = copy.deepcopy(_model)   
@@ -469,8 +483,15 @@ class BaesianSklearnSelector(Selector):
         if self.cv:
             losses = []
             np.random.seed(200)
-            kf = StratifiedKFold(n_splits=self.cv)
-            for train_index, test_index in kf.split(self.X_train, self.y_train):
+
+            if self.objective == 'classification':
+                kf = StratifiedKFold(n_splits=self.cv)
+                split = kf.split(self.X_train, self.y_train)
+            else:
+                kf = KFold(n_splits=self.cv)
+                split = kf.split(self.X_train)
+                
+            for train_index, test_index in split:
                 X_train, X_test = self.X_train[train_index], self.X_train[test_index]
                 y_train, y_test = self.y_train[train_index], self.y_train[test_index]
                 model = copy.deepcopy(_model)   
