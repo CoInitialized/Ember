@@ -9,7 +9,7 @@ from .search_space import grid_params, get_bayes_params
 from sklearn.metrics import accuracy_score, r2_score
 from functools import partial
 import copy
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, StratifiedKFold
 import catboost
 from skopt.plots import plot_convergence
 from skopt.callbacks import DeltaYStopper
@@ -157,7 +157,7 @@ class GridSelector(Selector):
 
         return fig, axes
 
-    def fit(self,X, y):
+    def fit(self,X, y, plot = False):
         """ Build a model from the training set (X, y).
 
         Args:
@@ -175,37 +175,75 @@ class GridSelector(Selector):
             learned_params = {}
             if key == 'CAT':
                 learned_params['logging_level'] = 'Silent'
+                # pass
             print(f"Searching model for {key}")
             for i in range(min([self.steps,len(self.params[key])])):
                 print(f'step {i}')
                 del gcv
                 refit_bool = False if i < (min([self.steps,len(self.params[key])-1]) - 1) else True
+                np.random.seed(200)
                 gcv = GridSearchCV(estimator = self.models[key](**learned_params), param_grid = self.params[key][i], scoring=self.scoring, cv=self.folds, verbose = 0, n_jobs =self.n_jobs, refit= refit_bool)
                 print('fitowanie')
                 gcv.fit(X,y)
                 print('updatowanie')
                 learned_params.update(gcv.best_params_)
                 print('plotowanie')
-                fig, axes = self.make_plot(scores = gcv.cv_results_['mean_test_score'], params = self.params[key][i],show=False)
+                if plot:
+                    fig, axes = self.make_plot(scores = gcv.cv_results_['mean_test_score'], params = self.params[key][i],show=False)
+                    self.figures[name] = fig
+                
                 name = "_".join([x for x in self.params[key][i].keys()])
                 print(name)
-                self.figures[name] = fig
+            
+
+            best_estimator_for_key = None
+            best_score_for_key = 0
+
             try:
-                #może nie być najlepszego modelu XD
-                self.models[key] = gcv.best_estimator_
+                best_estimator_for_key = gcv.best_estimator_
+                best_score_for_key = gcv.best_score_
                 if best_score:
-                    score = gcv.best_estimator_.score(X,y)
-                    if score > best_score:
-                        best_score = score
+                    if best_score_for_key > best_score:
+                        best_score = best_score_for_key
                         self.best_model = gcv.best_estimator_
                 else:
-                    best_score = gcv.best_estimator_.score(X,y)
+                    best_score = best_score_for_key
                     self.best_model = gcv.best_estimator_ 
             except:
                 pass
 
             del learned_params
             
+            np.random.seed(200)
+            kf = StratifiedKFold(n_splits=self.folds)
+            scores = []
+            for train_index, test_index in kf.split(X, y):
+                X_train, X_test = X[train_index], X[test_index]
+                y_train, y_test = y[train_index], y[test_index]
+                if key == 'CAT':
+                    base_model = self.models[key](logging_level = 'Silent')
+                else:
+                    base_model = self.models[key]()
+                base_model.fit(X_train,y_train)
+                score = base_model.score(X_test, y_test)
+                scores.append(score)
+                del base_model
+            if np.mean(scores) > best_score_for_key:
+                best_score_for_key = np.mean(scores)
+                if key == 'CAT':
+                    model = self.models[key](logging_level = 'Silent')
+                else:
+                    model = self.models[key]()
+                model.fit(X,y)
+                self.best_model = model
+                best_estimator_for_key = model
+            if best_score_for_key > best_score:
+                best_score = best_score_for_key
+
+
+            self.models[key] = copy.deepcopy(best_estimator_for_key)
+            del best_estimator_for_key
+
         return self
 
 class BayesSelector(Selector):
@@ -278,8 +316,9 @@ class BayesSelector(Selector):
 
         if self.cv:
             losses = []
-            kf = KFold(n_splits=self.cv)
-            for train_index, test_index in kf.split(self.X_train):
+            np.random.seed(200)
+            kf = StratifiedKFold(n_splits=self.cv)
+            for train_index, test_index in kf.split(self.X_train, self.y_train):
                 X_train, X_test = self.X_train[train_index], self.X_train[test_index]
                 y_train, y_test = self.y_train[train_index], self.y_train[test_index]
                 model = copy.deepcopy(_model)   
@@ -429,8 +468,9 @@ class BaesianSklearnSelector(Selector):
 
         if self.cv:
             losses = []
-            kf = KFold(n_splits=self.cv)
-            for train_index, test_index in kf.split(self.X_train):
+            np.random.seed(200)
+            kf = StratifiedKFold(n_splits=self.cv)
+            for train_index, test_index in kf.split(self.X_train, self.y_train):
                 X_train, X_test = self.X_train[train_index], self.X_train[test_index]
                 y_train, y_test = self.y_train[train_index], self.y_train[test_index]
                 model = copy.deepcopy(_model)   
