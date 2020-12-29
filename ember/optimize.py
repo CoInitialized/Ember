@@ -514,7 +514,7 @@ class BaesianSklearnSelector(Selector):
         #print(score)
         if self.best_score == None or score < self.best_score:
             self.best_model = copy.deepcopy(_model)
-            self.best_score = loss
+            self.best_score = score
         del _model
         return loss
 
