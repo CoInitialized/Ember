@@ -410,9 +410,29 @@ class BayesSelector(Selector):
             hyperparams['_'.join(key.split('_')[:-1])] = hyperparams.pop(key)
 
         hyperparams = fix_hyperparams(hyperparams)
-
-        self.best_model = self.models[name](**hyperparams) 
-        self.best_model.fit(X, y)   
+        self.best_model = self.models[name](**hyperparams)
+        np.random.seed(200)
+        if self.objective == 'classification':
+            kf = StratifiedKFold(n_splits=self.cv)
+            split = kf.split(X, y)
+        else:
+            kf = KFold(n_splits=self.cv)
+            split = kf.split(X)
+        self.best_score = None
+        for model in ([self.best_model] + list(self.models.values())):
+            scores = []
+            for train_index, test_index in split:
+                X_train, X_test = X[train_index], X[test_index]
+                y_train, y_test = y[train_index], y[test_index]
+                base_model = copy.deepcopy(model)
+                base_model.fit(X_train, y_train)
+                score = base_model.score(X_test, y_test)
+                scores.append(score)
+                del base_model
+            if self.best_score == None or np.mean(scores) > self.best_score:
+                self.best_score = np.mean(scores)
+                self.best_model = copy.deepcopy(model)
+        self.best_model.fit(X, y)
         return self
 
 class BaesianSklearnSelector(Selector):
@@ -440,7 +460,7 @@ class BaesianSklearnSelector(Selector):
         self.y_test = y_test
         self.cv = cv
         self.space = None
-        self.best_score = None
+        self.best_loss = None
         if (self.X_test is not None) ^ (self.y_test is not None):
                 raise Exception("You have to provide both X_test and y_test not only one of them!")
             
@@ -512,9 +532,9 @@ class BaesianSklearnSelector(Selector):
 
         score = _model.score(self.X_train, self.y_train)
         #print(score)
-        if self.best_score == None or score < self.best_score:
+        if self.best_loss == None or loss < self.best_loss:
             self.best_model = copy.deepcopy(_model)
-            self.best_score = score
+            self.best_loss = loss
         del _model
         return loss
 
@@ -546,6 +566,28 @@ class BaesianSklearnSelector(Selector):
             results.append((key,res_gp))
         fig, ax = plt.subplots()
         plot= plot_convergence(*results,ax=ax);
+        np.random.seed(200)
+        if self.objective == 'classification':
+            kf = StratifiedKFold(n_splits=self.cv)
+            split = kf.split(X, y)
+        else:
+            kf = KFold(n_splits=self.cv)
+            split = kf.split(X)
+        self.best_score = None
+        for model in ([self.best_model] + list(self.models.values())):
+            scores = []
+            for train_index, test_index in split:
+                X_train, X_test = X[train_index], X[test_index]
+                y_train, y_test = y[train_index], y[test_index]
+                base_model = copy.deepcopy(model)
+                base_model.fit(X_train, y_train)
+                score = base_model.score(X_test, y_test)
+                scores.append(score)
+                del base_model
+            if self.best_score == None or np.mean(scores) > self.best_score:
+                self.best_score = np.mean(scores)
+                self.best_model = copy.deepcopy(model)
+        self.best_model.fit(X, y)
         return fig,results,self.best_model
 
 

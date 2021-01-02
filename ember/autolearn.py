@@ -128,6 +128,8 @@ class Learner:
                 model = GridSelector(self.objective, speed, folds = cv, **kwargs)
             else:
                 raise Exception("Speed specifier not supported")
+        elif optimizer == 'scikit-bayes':
+            model = BaesianSklearnSelector(self.objective, speed, folds = cv, **kwargs)
         else:
             raise Exception("Optimizer not supported")
         
