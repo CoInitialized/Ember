@@ -38,8 +38,9 @@ results = {
 }
 
 failed_names = []
+from pathlib import Path
+path = Path(r'datasets\classification')
 
-path = r'datasets\classification'
 
 names = os.listdir(path)
 
