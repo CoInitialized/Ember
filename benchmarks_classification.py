@@ -39,23 +39,31 @@ results = {
 
 failed_names = []
 
-path = r'C:\Users\cdami\Documents\Python Scripts\Ember\datasets\classification'
+path = r'datasets\classification'
 
 names = os.listdir(path)
 
 # names = ['auto-mpg.csv']
 
-for name in tqdm.tqdm(names):
+for name in tqdm.tqdm(names[:1]):
     try: 
         data = pd.read_csv(path + '/' +  name)
         X, y = data.drop(columns = ['class']), data['class']
-        X_train, X_test, y_train, y_test = train_test_split(X, y, random_state = 42, test_size = 20)
+        np.random.seed(200)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, random_state = 42, test_size = 0.2)
         learner = Learner(objective='classification', X = X_train, y = y_train)
+        print('LEARNING GRID SEARCH')
         learner.fit(cv = 3, optimizer = 'grid')
         _feature_preprocessor = learner.feature_preprocessor
         _target_preprocessor = learner.target_preprocessor
         y_test = _target_preprocessor.transform(np.array(y_test).reshape(-1,1)).ravel()
-        score_auto = accuracy_score(y_test, learner.predict(X_test))
+        score_auto_grid = accuracy_score(y_test, learner.predict(X_test))
+        print('LEARNING HYPEROPT')
+        learner.fit(cv = 3, optimizer = 'bayes')
+        score_auto_hyperopt = accuracy_score(y_test, learner.predict(X_test))
+        print('LEARNING SKOPT')
+        learner.fit(cv = 3, optimizer = 'scikit-bayes')
+        score_auto_skopt = accuracy_score(y_test, learner.predict(X_test))
         xgb_default = XGBClassifier()
         cat_default = CatBoostClassifier(logging_level = 'Silent')
         lgbm_default = LGBMClassifier()
@@ -72,9 +80,11 @@ for name in tqdm.tqdm(names):
         results['xgboost'].append(score_xgb)
         results['lightgbm'].append(score_lgbm)
         results['catboost'].append(score_cat)
-        results['automl-grid'].append(score_auto)
+        results['automl-grid'].append(score_auto_grid)
+        results['automl-hyperopt'].append(score_auto_hyperopt)
+        results['automl-skopt'].append(score_auto_skopt)
         print('RESULTS:')
-        print(name, score_xgb, score_lgbm, score_cat, score_auto)
+        print(f"Name: {name}, XGB-default: {score_xgb}, LGBM-default: {score_lgbm}, CAT-default: {score_cat}, GRID: {score_auto_grid}, HYPEROPT: {score_auto_hyperopt}, SKOPT: {score_auto_skopt}")
     except Exception as ex:
         print(f'{name} failed')
         print(ex)
