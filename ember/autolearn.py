@@ -2,7 +2,7 @@ from .preprocessing import Preprocessor, GeneralEncoder, GeneralScaler
 import pandas as pd
 import numpy as np
 from .impute import GeneralImputer
-from .optimize import GridSelector, BayesSelector
+from .optimize import GridSelector, BayesSelector, BaesianSklearnSelector
 from sklearn.pipeline import make_pipeline
 from .utils import DtypeSelector
 
