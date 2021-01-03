@@ -430,7 +430,7 @@ class BayesSelector(Selector):
                 kf = KFold(n_splits=self.cv)
                 split = kf.split(X)
             self.best_score = None
-            for model in ([self.best_model] + list(self.models.values())):
+            for model in ([self.best_model] + [model() for model in  list(self.models.values())]):
                 scores = []
                 for train_index, test_index in split:
                     X_train, X_test = X[train_index], X[test_index]
@@ -484,6 +484,7 @@ class BaesianSklearnSelector(Selector):
         self.cv = cv
         self.space = None
         self.best_loss = None
+        self.best_score = None
         if (self.X_test is not None) ^ (self.y_test is not None):
                 raise Exception("You have to provide both X_test and y_test not only one of them!")
             
@@ -555,11 +556,12 @@ class BaesianSklearnSelector(Selector):
             _model.fit(self.X_train, self.y_train)
             loss = self.loss(self.y_train, _model.predict(self.X_train))
 
-        score = _model.score(self.X_train, self.y_train)
-        #print(score)
+        score = _model.score(self.X_test, self.y_test)
+        
         if self.best_loss == None or loss < self.best_loss:
             self.best_model = copy.deepcopy(_model)
             self.best_loss = loss
+            self.best_score = score
         del _model
         if not loss:
             loss = np.inf
@@ -594,26 +596,39 @@ class BaesianSklearnSelector(Selector):
         fig, ax = plt.subplots()
         plot= plot_convergence(*results,ax=ax);
         np.random.seed(200)
-        if self.objective == 'classification':
-            kf = StratifiedKFold(n_splits=self.cv)
-            split = kf.split(X, y)
-        else:
-            kf = KFold(n_splits=self.cv)
-            split = kf.split(X)
-        self.best_score = None
-        for model in ([self.best_model] + list(self.models.values())):
-            scores = []
-            for train_index, test_index in split:
-                X_train, X_test = X[train_index], X[test_index]
-                y_train, y_test = y[train_index], y[test_index]
+
+        if self.cv:
+            if self.objective == 'classification':
+                kf = StratifiedKFold(n_splits=self.cv)
+                split = kf.split(X, y)
+            else:
+                kf = KFold(n_splits=self.cv)
+                split = kf.split(X)
+            self.best_score = None
+            for model in ([self.best_model] + [model() for model in  list(self.models.values())]):
+                scores = []
+                for train_index, test_index in split:
+                    X_train, X_test = X[train_index], X[test_index]
+                    y_train, y_test = y[train_index], y[test_index]
+                    base_model = copy.deepcopy(model)
+                    base_model.fit(X_train, y_train)
+                    score = base_model.score(X_test, y_test)
+                    scores.append(score)
+                    del base_model
+                if self.best_score == None or np.mean(scores) > self.best_score:
+                    self.best_score = np.mean(scores)
+                    self.best_model = copy.deepcopy(model)
+
+        elif self.X_test is not None and self.y_test is not None:
+            for model in ([self.best_model] + [model() for model in  list(self.models.values())]):
                 base_model = copy.deepcopy(model)
-                base_model.fit(X_train, y_train)
-                score = base_model.score(X_test, y_test)
-                scores.append(score)
-                del base_model
-            if self.best_score == None or np.mean(scores) > self.best_score:
-                self.best_score = np.mean(scores)
-                self.best_model = copy.deepcopy(model)
+                base_model.fit(self.X_train, self.y_train)
+                score = self.scoring(self.y_test, base_model.predict(self.X_test))
+                if self.best_score == None or score > self.best_score:
+                    self.best_score = score
+                    self.best_model = copy.deepcopy(model)
+        else:
+            pass
         self.best_model.fit(X, y)
         return fig,results,self.best_model
 
