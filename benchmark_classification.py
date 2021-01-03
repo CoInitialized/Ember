@@ -84,7 +84,7 @@ def get_xgb_score(X_train,y_train,X_test,y_test):
 def get_cat_score(X_train,y_train,X_test,y_test):
     cat_default = CatBoostClassifier(logging_level="Silent")
     cat_default.fit(X_train, y_train)
-    score_xgb = score(y_test, cat_default.predict(X_test))
+    score_xgb = accuracy_score(y_test, cat_default.predict(X_test))
     return score_xgb
 def get_gid_score(X_train,y_train,X_test,y_test,folds=3):
     model = GridSelector('classification',folds=folds, steps=6)
