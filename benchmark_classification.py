@@ -14,8 +14,6 @@ import tqdm
 import datetime
 import json
 
-
-score = accuracy_score
 objective = 'classification'
 
 def preproces_data(X,y, target='class', objective='regression'):
@@ -72,37 +70,37 @@ def change_df_column(df,to_change,new_name):
     df.columns = df_columns
 
 def get_lgbm_score(X_train,y_train,X_test,y_test):
-    lgbm_default = LGBMRegressor()
+    lgbm_default = LGBMClassifier()
     lgbm_default.fit(X_train, y_train)
-    score_lgbm = score(y_test, lgbm_default.predict(X_test))
+    score_lgbm = accuracy_score(y_test, lgbm_default.predict(X_test))
     return score_lgbm
 
 def get_xgb_score(X_train,y_train,X_test,y_test):
-    xgb_default = XGBRegressor()
+    xgb_default = XGBClassifier()
     xgb_default.fit(X_train, y_train)
-    score_xgb = score(y_test, xgb_default.predict(X_test))
+    score_xgb = accuracy_score(y_test, xgb_default.predict(X_test))
     return score_xgb
 
 def get_cat_score(X_train,y_train,X_test,y_test):
-    cat_default = CatBoostRegressor(logging_level="Silent")
+    cat_default = CatBoostClassifier(logging_level="Silent")
     cat_default.fit(X_train, y_train)
     score_xgb = score(y_test, cat_default.predict(X_test))
     return score_xgb
 def get_gid_score(X_train,y_train,X_test,y_test,folds=3):
-    model = GridSelector(objective,folds=folds, steps=6)
+    model = GridSelector('classification',folds=folds, steps=6)
     model.fit(X_train, y_train)
-    score = score(y_test, model.predict(X_test))
+    score = accuracy_score(y_test, model.predict(X_test))
     return score
 def get_bayes_score(X_train,y_train,X_test,y_test,folds=3):
     model = BayesSelector('classification', cv=folds, max_evals=10)
     model.fit(X_train, y_train)
-    score = score(y_test, model.predict(X_test))
+    score = accuracy_score(y_test, model.predict(X_test))
     return score
 
 def get_bayes_scikit_score(X_train,y_train,X_test,y_test,folds=3):
     model = BaesianSklearnSelector('classification', cv=folds, max_evals=25)
     model.fit(X_train, y_train)
-    score = score(y_test, model.predict(X_test))
+    score = accuracy_score(y_test, model.predict(X_test))
     return score
 
 
