@@ -176,7 +176,7 @@ class GridSelector(Selector):
             if key == 'CAT':
                 learned_params['logging_level'] = 'Silent'
             elif key == 'XGB':
-                learned_params['silent'] = True
+                learned_params['verbosity'] = 0
                 # pass
             print(f"Searching model for {key}")
             for i in range(min([self.steps,len(self.params[key])])):
@@ -231,6 +231,8 @@ class GridSelector(Selector):
                 y_train, y_test = y[train_index], y[test_index]
                 if key == 'CAT':
                     base_model = self.models[key](logging_level = 'Silent')
+                elif key == 'XGB':
+                    base_model = self.models[key](verbosity = 0)
                 else:
                     base_model = self.models[key]()
                 base_model.fit(X_train,y_train)
@@ -241,6 +243,8 @@ class GridSelector(Selector):
                 best_score_for_key = np.mean(scores)
                 if key == 'CAT':
                     model = self.models[key](logging_level = 'Silent')
+                elif key == 'XGB':
+                    model = self.models[key](verbosity = 0)
                 else:
                     model = self.models[key]()
                 model.fit(X,y)
@@ -319,7 +323,7 @@ class BayesSelector(Selector):
         if name == 'CAT':
             _model = model(logging_level = 'Silent', **space)
         elif name == 'XGB':
-            _model = model(silent = True, **space)
+            _model = model(verbosity = 0, **space)
         else:
             _model = model(**space)
 
@@ -501,7 +505,7 @@ class BaesianSklearnSelector(Selector):
         if model_key == 'CAT':
             params['logging_level'] = 'Silent'
         elif model_key == 'XGB':
-            params['silent'] = True
+            params['verbosity'] = 0
         _model = self.model(**params)
 
         loss = None
