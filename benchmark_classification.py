@@ -97,20 +97,20 @@ def get_cat_score(X_train,y_train,X_test,y_test):
     score_cat = accuracy_score(y_test, cat_default.predict(X_test))
     neptune.log_metric('cat', score_cat)
     return score_cat
-def get_gid_score(X_train,y_train,X_test,y_test,folds=3):
+def get_gid_score(X_train,y_train,X_test,y_test,folds=5):
     model = GridSelector('classification',folds=folds, steps=6)
     model.fit(X_train, y_train)
     score = accuracy_score(y_test, model.predict(X_test))
     neptune.log_metric('grid', score)
     return score
-def get_bayes_score(X_train,y_train,X_test,y_test,folds=3):
+def get_bayes_score(X_train,y_train,X_test,y_test,folds=5):
     model = BayesSelector('classification', cv=folds, max_evals=10)
     model.fit(X_train, y_train)
     score = accuracy_score(y_test, model.predict(X_test))
     neptune.log_metric('hyperopt', score)
     return score
 
-def get_bayes_scikit_score(X_train,y_train,X_test,y_test,folds=3):
+def get_bayes_scikit_score(X_train,y_train,X_test,y_test,folds=5):
     model = BaesianSklearnSelector('classification', cv=folds, max_evals=25)
     model.fit(X_train, y_train)
     score = accuracy_score(y_test, model.predict(X_test))
@@ -132,7 +132,7 @@ def evaluate(path=r'datasets/classification'):
             change_df_column(data, dataset['target_column'], 'class')
             X, y = data.drop(columns=['class']), data['class']
             X,y = preproces_data(X,y)
-            X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42, test_size=0.2)
+            X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42, test_size=0.2, stratify = y)
             score = {
                 "bayes_scikit": get_bayes_scikit_score(X_train, y_train, X_test, y_test),
                 'lgbm': get_lgbm_score(X_train,y_train,X_test,y_test),
@@ -155,7 +155,26 @@ def evaluate(path=r'datasets/classification'):
         json.dump(scores, outfile)
     return scores
 
+
+def evaluate_single():
+
+    neptune.create_experiment(name = "GRID first twenty")
+    path = r'datasets/classification'
+    names = os.listdir(path)
+    datasets = [{"name":x,"target_column":"class"} for x in names]
+
+    for dataset in tqdm.tqdm(datasets[:20]):
+        data = pd.read_csv(path + '/' + dataset["name"])
+        change_df_column(data, dataset['target_column'], 'class')
+        X, y = data.drop(columns=['class']), data['class']
+        X,y = preproces_data(X,y)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42, test_size=0.2)
+        xgb_default = GridSelector('classification',folds=3, steps=6)
+        xgb_default.fit(X_train, y_train)
+        score_xgb = accuracy_score(y_test, xgb_default.predict(X_test))
+        neptune.log_metric(dataset['name'], score_xgb)
 if __name__ == '__main__':
-    evaluate()
+    
+    evaluate_single()
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
