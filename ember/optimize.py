@@ -445,7 +445,7 @@ class BayesSelector(Selector):
                     self.best_model = copy.deepcopy(model)
 
         elif self.X_test is not None and self.y_test is not None:
-            for model in ([self.best_model] + list(self.models.values())):
+            for model in ([self.best_model] + [model() for model in  list(self.models.values())]):
                 base_model = copy.deepcopy(model)
                 base_model.fit(self.X_train, self.y_train)
                 score = self.scoring(self.y_test, base_model.predict(self.X_test))
