@@ -563,8 +563,6 @@ class BaesianSklearnSelector(Selector):
             self.best_loss = loss
             self.best_score = score
         del _model
-        if not loss:
-            loss = np.inf
         return loss
 
     def fit(self, X, y):
