@@ -13,8 +13,16 @@ from lightgbm import LGBMClassifier
 import tqdm
 import datetime
 import json
+import neptune
 
 objective = 'classification'
+
+token = 'eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vdWkubmVwdHVuZS5haSIsImFwaV91cmwiOiJodHRwczovL3VpLm5lcHR1bmUuYWkiLCJhcGlfa2V5IjoiYTFlODM1OWItZWMxMC00Yzg1LWE0YmMtMzkwNmUxYWI1ZmZlIn0='
+project_name = 'damiankucharski/eng'
+neptune.init(project_qualified_name= project_name, # change this to your `workspace_name/project_name`
+             api_token=token, # change this to your api token
+            )
+
 
 def preproces_data(X,y, target='class', objective='regression'):
 
@@ -73,34 +81,40 @@ def get_lgbm_score(X_train,y_train,X_test,y_test):
     lgbm_default = LGBMClassifier()
     lgbm_default.fit(X_train, y_train)
     score_lgbm = accuracy_score(y_test, lgbm_default.predict(X_test))
+    neptune.log_metric('lgbm', score)
     return score_lgbm
 
 def get_xgb_score(X_train,y_train,X_test,y_test):
     xgb_default = XGBClassifier()
     xgb_default.fit(X_train, y_train)
     score_xgb = accuracy_score(y_test, xgb_default.predict(X_test))
+    neptune.log_metric('xgb', score)
     return score_xgb
 
 def get_cat_score(X_train,y_train,X_test,y_test):
     cat_default = CatBoostClassifier(logging_level="Silent")
     cat_default.fit(X_train, y_train)
     score_xgb = accuracy_score(y_test, cat_default.predict(X_test))
+    neptune.log_metric('cat', score)
     return score_xgb
 def get_gid_score(X_train,y_train,X_test,y_test,folds=3):
     model = GridSelector('classification',folds=folds, steps=6)
     model.fit(X_train, y_train)
     score = accuracy_score(y_test, model.predict(X_test))
+    neptune.log_metric('grid', score)
     return score
 def get_bayes_score(X_train,y_train,X_test,y_test,folds=3):
     model = BayesSelector('classification', cv=folds, max_evals=10)
     model.fit(X_train, y_train)
     score = accuracy_score(y_test, model.predict(X_test))
+    neptune.log_metric('hyperopt', score)
     return score
 
 def get_bayes_scikit_score(X_train,y_train,X_test,y_test,folds=3):
     model = BaesianSklearnSelector('classification', cv=folds, max_evals=25)
     model.fit(X_train, y_train)
     score = accuracy_score(y_test, model.predict(X_test))
+    neptune.log_metric('skopt', score)
     return score
 
 
@@ -113,12 +127,12 @@ def evaluate(path=r'datasets/classification'):
     datasets = [{"name":x,"target_column":"class"} for x in names]
     for dataset in tqdm.tqdm(datasets[:20]):
         try:
+            neptune.create_experiment(name = str(datetime.datetime.today()).split()[0] + "_20_" + dataset['name'])
             data = pd.read_csv(path + '/' + dataset["name"])
             change_df_column(data, dataset['target_column'], 'class')
             X, y = data.drop(columns=['class']), data['class']
             X,y = preproces_data(X,y)
             X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42, test_size=0.2)
-
             score = {
                 "bayes_scikit": get_bayes_scikit_score(X_train, y_train, X_test, y_test),
                 'lgbm': get_lgbm_score(X_train,y_train,X_test,y_test),
