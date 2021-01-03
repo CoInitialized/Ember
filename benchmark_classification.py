@@ -7,9 +7,9 @@ from sklearn.model_selection import train_test_split
 from ember.preprocessing import Preprocessor, GeneralEncoder, GeneralScaler
 from ember.optimize import BaesianSklearnSelector
 from sklearn.metrics import r2_score, accuracy_score
-from xgboost import XGBRegressor
-from catboost import CatBoostRegressor
-from lightgbm import LGBMRegressor
+from xgboost import XGBClassifier
+from catboost import XGBClassifier
+from lightgbm import LGBMClassifier
 import tqdm
 import datetime
 import json
