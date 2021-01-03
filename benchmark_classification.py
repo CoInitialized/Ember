@@ -100,9 +100,9 @@ def get_bayes_score(X_train,y_train,X_test,y_test,folds=3):
     return score
 
 def get_bayes_scikit_score(X_train,y_train,X_test,y_test,folds=3):
-    model = BaesianSklearnSelector('classification', cv=folds, max_evals=50)
+    model = BaesianSklearnSelector('classification', cv=folds, max_evals=25)
     model.fit(X_train, y_train)
-    score = r2_score(y_test, model.predict(X_test))
+    score = score(y_test, model.predict(X_test))
     return score
 
 
