@@ -310,7 +310,7 @@ class BayesSelector(Selector):
             raise Exception("Unknown objective, choose classification or regression")
 
 
-    def objective_function(self, space):
+    def objective_function(self, space, silent = False):
         """Function to be optimized
         """
 
@@ -320,9 +320,9 @@ class BayesSelector(Selector):
         space = fix_hyperparams(space)
 
         ### TEST IF IT ACTUALLY WORKS
-        if name == 'CAT':
+        if name == 'CAT' and silent:
             _model = model(logging_level = 'Silent', **space)
-        elif name == 'XGB':
+        elif name == 'XGB' and silent:
             _model = model(verbosity = 0, **space)
         else:
             _model = model(**space)
@@ -495,16 +495,16 @@ class BaesianSklearnSelector(Selector):
             raise Exception("Unknown objective, choose classification or regression")
 
 
-    def objectivefunc(self,model_key,names,listofparams):
+    def objectivefunc(self,model_key,names,listofparams, silent = False):
         """Function to be optimized
         """
         ### TEST IF IT ACTUALLY WORKS
         params = {}
         for name,param in zip(names,listofparams):
             params[name] = param
-        if model_key == 'CAT':
+        if model_key == 'CAT' and silent:
             params['logging_level'] = 'Silent'
-        elif model_key == 'XGB':
+        elif model_key == 'XGB' and silent:
             params['verbosity'] = 0
         _model = self.model(**params)
 
