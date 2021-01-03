@@ -413,6 +413,8 @@ class BayesSelector(Selector):
 
         results = self.org_results(trials.trials, hyperparams)
 
+        self.best_score = results['training score']
+
         name = list(hyperparams.keys())[0].split('_')[-1].upper()
         for key in list(hyperparams.keys()):
             hyperparams['_'.join(key.split('_')[:-1])] = hyperparams.pop(key)
@@ -446,7 +448,7 @@ class BayesSelector(Selector):
             for model in ([self.best_model] + list(self.models.values())):
                 base_model = copy.deepcopy(model)
                 base_model.fit(self.X_train, self.y_train)
-                score = base_model.score(self.X_test, self.y_test)
+                score = self.scoring(self.y_test, base_model.predict(self.X_test))
                 if self.best_score == None or score > self.best_score:
                     self.best_score = score
                     self.best_model = copy.deepcopy(model)
