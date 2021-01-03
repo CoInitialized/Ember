@@ -169,7 +169,7 @@ def evaluate_single():
         X, y = data.drop(columns=['class']), data['class']
         X,y = preproces_data(X,y)
         X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42, test_size=0.2)
-        xgb_default = GridSelector('classification',folds=5, steps=6)
+        xgb_default = BayesSelector('classification',X_test = X_test, y_test = y_test, max_evals=10)
         xgb_default.fit(X_train, y_train)
         score_xgb = accuracy_score(y_test, xgb_default.predict(X_test))
         neptune.log_metric(dataset['name'], score_xgb)
