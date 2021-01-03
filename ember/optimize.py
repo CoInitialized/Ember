@@ -536,6 +536,8 @@ class BaesianSklearnSelector(Selector):
             self.best_model = copy.deepcopy(_model)
             self.best_loss = loss
         del _model
+        if not loss:
+            loss = np.inf
         return loss
 
     def fit(self, X, y):
