@@ -81,22 +81,22 @@ def get_lgbm_score(X_train,y_train,X_test,y_test):
     lgbm_default = LGBMClassifier()
     lgbm_default.fit(X_train, y_train)
     score_lgbm = accuracy_score(y_test, lgbm_default.predict(X_test))
-    neptune.log_metric('lgbm', score)
+    neptune.log_metric('lgbm', score_lgbm)
     return score_lgbm
 
 def get_xgb_score(X_train,y_train,X_test,y_test):
     xgb_default = XGBClassifier()
     xgb_default.fit(X_train, y_train)
     score_xgb = accuracy_score(y_test, xgb_default.predict(X_test))
-    neptune.log_metric('xgb', score)
+    neptune.log_metric('xgb', score_xgb)
     return score_xgb
 
 def get_cat_score(X_train,y_train,X_test,y_test):
     cat_default = CatBoostClassifier(logging_level="Silent")
     cat_default.fit(X_train, y_train)
-    score_xgb = accuracy_score(y_test, cat_default.predict(X_test))
-    neptune.log_metric('cat', score)
-    return score_xgb
+    score_cat = accuracy_score(y_test, cat_default.predict(X_test))
+    neptune.log_metric('cat', score_cat)
+    return score_cat
 def get_gid_score(X_train,y_train,X_test,y_test,folds=3):
     model = GridSelector('classification',folds=folds, steps=6)
     model.fit(X_train, y_train)
