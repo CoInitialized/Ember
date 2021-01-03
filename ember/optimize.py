@@ -420,26 +420,39 @@ class BayesSelector(Selector):
         hyperparams = fix_hyperparams(hyperparams)
         self.best_model = self.models[name](**hyperparams)
         np.random.seed(200)
-        if self.objective == 'classification':
-            kf = StratifiedKFold(n_splits=self.cv)
-            split = kf.split(X, y)
-        else:
-            kf = KFold(n_splits=self.cv)
-            split = kf.split(X)
-        self.best_score = None
-        for model in ([self.best_model] + list(self.models.values())):
-            scores = []
-            for train_index, test_index in split:
-                X_train, X_test = X[train_index], X[test_index]
-                y_train, y_test = y[train_index], y[test_index]
+        if self.cv:
+            if self.objective == 'classification':
+                kf = StratifiedKFold(n_splits=self.cv)
+                split = kf.split(X, y)
+            else:
+                kf = KFold(n_splits=self.cv)
+                split = kf.split(X)
+            self.best_score = None
+            for model in ([self.best_model] + list(self.models.values())):
+                scores = []
+                for train_index, test_index in split:
+                    X_train, X_test = X[train_index], X[test_index]
+                    y_train, y_test = y[train_index], y[test_index]
+                    base_model = copy.deepcopy(model)
+                    base_model.fit(X_train, y_train)
+                    score = base_model.score(X_test, y_test)
+                    scores.append(score)
+                    del base_model
+                if self.best_score == None or np.mean(scores) > self.best_score:
+                    self.best_score = np.mean(scores)
+                    self.best_model = copy.deepcopy(model)
+
+        elif self.X_test is not None and self.y_test is not None:
+            for model in ([self.best_model] + list(self.models.values())):
                 base_model = copy.deepcopy(model)
-                base_model.fit(X_train, y_train)
-                score = base_model.score(X_test, y_test)
-                scores.append(score)
-                del base_model
-            if self.best_score == None or np.mean(scores) > self.best_score:
-                self.best_score = np.mean(scores)
-                self.best_model = copy.deepcopy(model)
+                base_model.fit(self.X_train, self.y_train)
+                score = base_model.score(self.X_test, self.y_test)
+                if self.best_score == None or score > self.best_score:
+                    self.best_score = score
+                    self.best_model = copy.deepcopy(model)
+        else:
+            pass
+
         self.best_model.fit(X, y)
         return self
 
