@@ -310,7 +310,7 @@ class BayesSelector(Selector):
             raise Exception("Unknown objective, choose classification or regression")
 
 
-    def objective_function(self, space, silent = False):
+    def objective_function(self, space, silent = True):
         """Function to be optimized
         """
 
@@ -495,7 +495,7 @@ class BaesianSklearnSelector(Selector):
             raise Exception("Unknown objective, choose classification or regression")
 
 
-    def objectivefunc(self,model_key,names,listofparams, silent = False):
+    def objectivefunc(self,model_key,names,listofparams, silent = True):
         """Function to be optimized
         """
         ### TEST IF IT ACTUALLY WORKS
@@ -573,7 +573,7 @@ class BaesianSklearnSelector(Selector):
                                     get_baesian_space()[key],
                                     n_calls=self.max_evals,
                                     random_state=0,
-                                    callback=DeltaYStopper(0.01)
+                                    callback=DeltaYStopper(0.001)
                                 )       
             results.append((key,res_gp))
         fig, ax = plt.subplots()

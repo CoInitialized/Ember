@@ -158,7 +158,7 @@ def evaluate(path=r'datasets/classification'):
 
 def evaluate_single():
 
-    neptune.create_experiment(name = "GRID first twenty")
+    neptune.create_experiment(name = "Scikit first twenty")
     path = r'datasets/classification'
     names = os.listdir(path)
     datasets = [{"name":x,"target_column":"class"} for x in names]
