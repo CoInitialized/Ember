@@ -573,7 +573,7 @@ class BaesianSklearnSelector(Selector):
                                     get_baesian_space()[key],
                                     n_calls=self.max_evals,
                                     random_state=0,
-                                    callback=DeltaYStopper(0.001)
+                                    callback=DeltaYStopper(0.01)
                                 )       
             results.append((key,res_gp))
         fig, ax = plt.subplots()
