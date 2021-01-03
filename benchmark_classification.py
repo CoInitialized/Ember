@@ -158,7 +158,7 @@ def evaluate(path=r'datasets/classification'):
 
 def evaluate_single():
 
-    neptune.create_experiment(name = "GRID first twenty")
+    neptune.create_experiment(name = "Scikit first twenty")
     path = r'datasets/classification'
     names = os.listdir(path)
     datasets = [{"name":x,"target_column":"class"} for x in names]
@@ -168,10 +168,10 @@ def evaluate_single():
         change_df_column(data, dataset['target_column'], 'class')
         X, y = data.drop(columns=['class']), data['class']
         X,y = preproces_data(X,y)
-        X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42, test_size=0.2)
-        xgb_default = GridSelector('classification',folds=5, steps=6)
-        xgb_default.fit(X_train, y_train)
-        score_xgb = accuracy_score(y_test, xgb_default.predict(X_test))
+        X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42, test_size=0.2,stratify=y)
+        bayes_default = BaesianSklearnSelector('classification',cv=5, max_evals=20)
+        bayes_default.fit(X_train, y_train)
+        score_xgb = accuracy_score(y_test, bayes_default.predict(X_test))
         neptune.log_metric(dataset['name'], score_xgb)
 if __name__ == '__main__':
     
