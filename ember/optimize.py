@@ -175,6 +175,8 @@ class GridSelector(Selector):
             learned_params = {}
             if key == 'CAT':
                 learned_params['logging_level'] = 'Silent'
+            elif key == 'XGB':
+                learned_params['silent'] = True
                 # pass
             print(f"Searching model for {key}")
             for i in range(min([self.steps,len(self.params[key])])):
@@ -316,6 +318,8 @@ class BayesSelector(Selector):
         ### TEST IF IT ACTUALLY WORKS
         if name == 'CAT':
             _model = model(logging_level = 'Silent', **space)
+        elif name == 'XGB':
+            _model = model(silent = True, **space)
         else:
             _model = model(**space)
 
@@ -496,6 +500,8 @@ class BaesianSklearnSelector(Selector):
             params[name] = param
         if model_key == 'CAT':
             params['logging_level'] = 'Silent'
+        elif model_key == 'XGB':
+            params['silent'] = True
         _model = self.model(**params)
 
         loss = None
