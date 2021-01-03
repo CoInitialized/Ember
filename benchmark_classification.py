@@ -8,7 +8,7 @@ from ember.preprocessing import Preprocessor, GeneralEncoder, GeneralScaler
 from ember.optimize import BaesianSklearnSelector
 from sklearn.metrics import r2_score, accuracy_score
 from xgboost import XGBClassifier
-from catboost import XGBClassifier
+from catboost import CatBoostClassifier
 from lightgbm import LGBMClassifier
 import tqdm
 import datetime
