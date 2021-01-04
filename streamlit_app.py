@@ -11,6 +11,10 @@ from skopt.plots import plot_convergence
 from ember.optimize import BaesianSklearnSelector
 import pickle
 import base64
+import matplotlib.pyplot as plt
+import seaborn as sns
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 def download_link(object_to_download, download_filename, download_link_text):
     """
@@ -58,6 +62,7 @@ def main():
         target = 'class'
         X = data.drop(columns = [target])
         y = data[target]
+        columns = X.columns
 
         target_preprocessor = Preprocessor()
         target_preprocessor.add_branch('target')
@@ -105,9 +110,18 @@ def main():
         X = feature_preprocessor.fit_transform(X)
         #X = np.array(X)
         print("Starting selection")
+        sns.set_context("paper", font_scale=1)  
         bss = BaesianSklearnSelector(objective,iters, cv = 3)
         fig,results,model = bss.fit(X,y)
         st.pyplot(fig)
+
+        feature_imp = pd.DataFrame(sorted(zip(model.feature_importances_,columns)), columns=['Value','Feature'])
+        print(feature_imp.head(3))
+        sns.set_context("paper", font_scale=4)  
+        fig2 = plt.figure(figsize=(20, 20))
+        fig2.suptitle("Feature importance")
+        sns.barplot(x="Value", y="Feature", data=feature_imp.sort_values(by="Value", ascending=False))
+        st.pyplot(fig2)
 
         if st.button('Download model'):
             # nie dziala to

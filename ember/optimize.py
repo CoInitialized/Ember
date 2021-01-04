@@ -546,17 +546,18 @@ class BaesianSklearnSelector(Selector):
                 del model
             loss = sum(losses) / len(losses)
             _model.fit(self.X_train, self.y_train)
+            score = (1-loss)
             del losses
         
         elif self.X_test is not None and self.y_test is not None:
             _model.fit(self.X_train, self.y_train)
             loss = self.loss(self.y_test, _model.predict(self.X_test))
+            score = _model.score(self.X_test, self.y_test)
         
         else:
             _model.fit(self.X_train, self.y_train)
             loss = self.loss(self.y_train, _model.predict(self.X_train))
-
-        score = _model.score(self.X_test, self.y_test)
+            score = _model.score(self.X_test, self.y_test)
         
         if self.best_loss == None or loss < self.best_loss:
             self.best_model = copy.deepcopy(_model)
@@ -588,13 +589,13 @@ class BaesianSklearnSelector(Selector):
                                     get_baesian_space()[key],
                                     n_calls=self.max_evals,
                                     random_state=0,
-                                    callback=DeltaYStopper(0.001)
+                                    callback=DeltaYStopper(0.01)
                                 )       
             results.append((key,res_gp))
         fig, ax = plt.subplots()
         plot= plot_convergence(*results,ax=ax);
         np.random.seed(200)
-
+        self.best_score = None
         if self.cv:
             if self.objective == 'classification':
                 kf = StratifiedKFold(n_splits=self.cv)
