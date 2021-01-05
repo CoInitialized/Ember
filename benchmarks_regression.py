@@ -172,7 +172,7 @@ def evaluate_single():
         # model = BayesSelector(objective,X_test = X_test, y_test = y_test, max_evals=10)
         # model = BaesianSklearnSelector(objective,X_test = X_test, y_test = y_test, max_evals=10)
         # model = GridSelector(objective)
-        # model = LGBMRegressor()
+        model = LGBMRegressor()
         model.fit(X_train, y_train)
         score_xgb = r2_score(y_test, model.predict(X_test))
         neptune.log_metric(dataset['name'], score_xgb)
