@@ -8,7 +8,7 @@ from skopt.space.space import Categorical
 grid_params = {
             "CAT": [
                     {
-                        'n_estimators' : [i for i in range(50,275,25)]  
+                        'n_estimators' : [i for i in range(50,1000,25)]  
                     },
                     {
                         'learning_rate' : [0.001,0.01,0.1,0.2,0.3,0.4,0.5,0.7,0.9]
@@ -27,7 +27,7 @@ grid_params = {
                 ],
                 "XGB": [
                 {
-                    'n_estimators' : [i for i in range(50,275,25)]
+                    'n_estimators' : [i for i in range(50,1000,25)]
                 },
                 {
                     'learning_rate' : [0.001,0.01,0.1,0.2,0.3,0.4,0.5,0.7,0.9]
@@ -49,7 +49,7 @@ grid_params = {
                 ],
                 "LGBM": [
                     {
-                        'n_estimators' : [i for i in range(50,275,25)]  
+                        'n_estimators' : [i for i in range(50,1000,25)]  
                     },
                     {
                         'learning_rate' : [0.001,0.01,0.1,0.2,0.3,0.4,0.5,0.7,0.9]
@@ -138,14 +138,14 @@ def get_baesian_space():
     """
     space = {
                 "CAT": [
-                        Integer(50, 300, name='n_estimators'),
+                        Integer(50, 1000, name='n_estimators'),
                         Real(0.001,0.9,name='learning_rate',prior='log-uniform'),
                         Integer(3,10,name='depth'),
                         Real(0.0001,100,name='l2_leaf_reg',prior='log-uniform'),
                   
                 ],
                 "XGB": [
-                        Integer(50, 300, name='n_estimators'),
+                        Integer(50, 1000, name='n_estimators'),
                         Real(0.001,0.9,name='learning_rate',prior='log-uniform'),
                         Integer(3,10,name='max_depth'),
                         Real(0.5,6,name='min_child_weight'),
@@ -155,7 +155,7 @@ def get_baesian_space():
                         Real(0.0001,100,name="reg_alpha",prior='log-uniform'),
                 ],
                 "LGBM": [
-                        Integer(50, 300, name='n_estimators'),
+                        Integer(50, 1000, name='n_estimators'),
                         Real(0.001,0.9,name='learning_rate',prior='log-uniform'),
                         Integer(3,10,name='max_depth'),
                         Integer(10,150,name='num_leaves'),
