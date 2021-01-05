@@ -158,7 +158,7 @@ def evaluate(path=r'datasets/regression'):
 
 def evaluate_single():
 
-    neptune.create_experiment(name = "LGBM first twenty")
+    neptune.create_experiment(name = "Bayesian_hyperopt cv")
     path = r'datasets/regression'
     names = os.listdir(path)
     datasets = [{"name":x,"target_column":"class"} for x in names]
@@ -169,10 +169,11 @@ def evaluate_single():
         X, y = data.drop(columns=['class']), data['class']
         X,y = preproces_data(X,y)
         X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42, test_size=0.2)
-        # model = BayesSelector(objective,X_test = X_test, y_test = y_test, max_evals=10)
+        # model = BayesSelector(objective,cv=5, max_evals=10)
         # model = BaesianSklearnSelector(objective,X_test = X_test, y_test = y_test, max_evals=10)
         # model = GridSelector(objective)
-        model = LGBMRegressor()
+        # model = LGBMRegressor()
+        model = BaesianSklearnSelector(objective,cv=5, max_evals=100)
         model.fit(X_train, y_train)
         score_xgb = r2_score(y_test, model.predict(X_test))
         neptune.log_metric(dataset['name'], score_xgb)
