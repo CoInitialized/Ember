@@ -163,7 +163,7 @@ def evaluate_single():
     names = os.listdir(path)
     datasets = [{"name":x,"target_column":"class"} for x in names]
 
-    for dataset in tqdm.tqdm(datasets[:20]):
+    for dataset in tqdm.tqdm(datasets):
         data = pd.read_csv(path + '/' + dataset["name"])
         if data.count()[0] > 100:
             change_df_column(data, dataset['target_column'], 'class')
@@ -175,7 +175,7 @@ def evaluate_single():
             # grid = GridSelector(objective)
             xgb_default = LGBMRegressor()
             xgb_default.fit(X_train, y_train)
-            score_xgb = accuracy_score(y_test, xgb_default.predict(X_test))
+            score_xgb = r2_score(y_test, xgb_default.predict(X_test))
             neptune.log_metric(dataset['name'], score_xgb)
 if __name__ == '__main__':
     
