@@ -170,12 +170,12 @@ def evaluate_single():
             X, y = data.drop(columns=['class']), data['class']
             X,y = preproces_data(X,y)
             X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42, test_size=0.2)
-            # bayes = BayesSelector(objective,X_test = X_test, y_test = y_test, max_evals=10)
-            # bayes_sklearn = BaesianSklearnSelector(objective,X_test = X_test, y_test = y_test, max_evals=10)
-            # grid = GridSelector(objective)
-            xgb_default = LGBMRegressor()
-            xgb_default.fit(X_train, y_train)
-            score_xgb = r2_score(y_test, xgb_default.predict(X_test))
+            # model = BayesSelector(objective,X_test = X_test, y_test = y_test, max_evals=10)
+            # model = BaesianSklearnSelector(objective,X_test = X_test, y_test = y_test, max_evals=10)
+            # model = GridSelector(objective)
+            # model = LGBMRegressor()
+            model.fit(X_train, y_train)
+            score_xgb = r2_score(y_test, model.predict(X_test))
             neptune.log_metric(dataset['name'], score_xgb)
 if __name__ == '__main__':
     
