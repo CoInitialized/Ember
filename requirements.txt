@@ -1,0 +1,8 @@
+category_encoders
+xgboost
+catboost
+scikit-optimize
+lightgbm
+hyperopt
+neptune-client
+psutil
