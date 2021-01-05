@@ -15,7 +15,7 @@ import datetime
 import json
 import neptune
 
-objective = 'classification'
+objective = 'regression'
 
 token = 'eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vdWkubmVwdHVuZS5haSIsImFwaV91cmwiOiJodHRwczovL3VpLm5lcHR1bmUuYWkiLCJhcGlfa2V5IjoiNTdiOWEyMDQtNWMxNi00MzY1LTk3N2ItMjY0MmI3Njk1NmUwIn0='
 project_name = 'arkadiusz-czerwinski/eng'
@@ -158,21 +158,24 @@ def evaluate(path=r'datasets/regression'):
 
 def evaluate_single():
 
-    neptune.create_experiment(name = "Scikit first twenty")
+    neptune.create_experiment(name = "LGBM first twenty")
     path = r'datasets/regression'
     names = os.listdir(path)
     datasets = [{"name":x,"target_column":"class"} for x in names]
 
     for dataset in tqdm.tqdm(datasets[:20]):
         data = pd.read_csv(path + '/' + dataset["name"])
-        change_df_column(data, dataset['target_column'], 'class')
-        X, y = data.drop(columns=['class']), data['class']
-        X,y = preproces_data(X,y)
-        X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42, test_size=0.2)
-        xgb_default = BayesSelector('classification',X_test = X_test, y_test = y_test, max_evals=10)
-        xgb_default.fit(X_train, y_train)
-        score_xgb = accuracy_score(y_test, xgb_default.predict(X_test))
-        neptune.log_metric(dataset['name'], score_xgb)
+        if data.count()[0] > 100:
+            change_df_column(data, dataset['target_column'], 'class')
+            X, y = data.drop(columns=['class']), data['class']
+            X,y = preproces_data(X,y)
+            X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42, test_size=0.2)
+            bayes = BayesSelector(objective,X_test = X_test, y_test = y_test, max_evals=10)
+            bayes_sklearn = BaesianSklearnSelector(objective,X_test = X_test, y_test = y_test, max_evals=10)
+            grid = GridSelector(objective)
+            xgb_default.fit(X_train, y_train)
+            score_xgb = accuracy_score(y_test, xgb_default.predict(X_test))
+            neptune.log_metric(dataset['name'], score_xgb)
 if __name__ == '__main__':
     
     evaluate_single()
