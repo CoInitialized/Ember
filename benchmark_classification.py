@@ -18,7 +18,7 @@ import neptune
 objective = 'classification'
 
 token = 'eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vdWkubmVwdHVuZS5haSIsImFwaV91cmwiOiJodHRwczovL3VpLm5lcHR1bmUuYWkiLCJhcGlfa2V5IjoiYTFlODM1OWItZWMxMC00Yzg1LWE0YmMtMzkwNmUxYWI1ZmZlIn0='
-project_name = 'damiankucharski/eng'
+project_name = 'damiankucharski/Next20'
 neptune.init(project_qualified_name= project_name, # change this to your `workspace_name/project_name`
              api_token=token, # change this to your api token
             )
@@ -97,7 +97,7 @@ def get_cat_score(X_train,y_train,X_test,y_test):
     score_cat = accuracy_score(y_test, cat_default.predict(X_test))
     neptune.log_metric('cat', score_cat)
     return score_cat
-def get_gid_score(X_train,y_train,X_test,y_test,folds=5):
+def get_grid_score(X_train,y_train,X_test,y_test,folds=5):
     model = GridSelector('classification',folds=folds, steps=6)
     model.fit(X_train, y_train)
     score = accuracy_score(y_test, model.predict(X_test))
@@ -111,7 +111,7 @@ def get_bayes_score(X_train,y_train,X_test,y_test,folds=5):
     return score
 
 def get_bayes_scikit_score(X_train,y_train,X_test,y_test,folds=5):
-    model = BaesianSklearnSelector('classification', cv=folds, max_evals=25)
+    model = BaesianSklearnSelector('classification', X_test=X_test, y_test = y_test, max_evals=100)
     model.fit(X_train, y_train)
     score = accuracy_score(y_test, model.predict(X_test))
     neptune.log_metric('skopt', score)
@@ -139,7 +139,7 @@ def evaluate(path=r'datasets/classification'):
                 'xgb': get_xgb_score(X_train, y_train, X_test, y_test),
                 'cat': get_cat_score(X_train, y_train, X_test, y_test),
                 'bayes_hyperopt': get_bayes_score(X_train, y_train, X_test, y_test),
-                "grid": get_gid_score(X_train, y_train, X_test, y_test),
+                "grid": get_grid_score(X_train, y_train, X_test, y_test),
                 'name': dataset['name']
             }
 
@@ -158,21 +158,29 @@ def evaluate(path=r'datasets/classification'):
 
 def evaluate_single():
 
-    neptune.create_experiment(name = "Scikit first twenty")
     path = r'datasets/classification'
     names = os.listdir(path)
     datasets = [{"name":x,"target_column":"class"} for x in names]
 
-    for dataset in tqdm.tqdm(datasets[:20]):
+    for dataset in tqdm.tqdm(datasets):
+        print('Training ' + dataset['name'])
+        neptune.create_experiment(name = dataset['name'])
         data = pd.read_csv(path + '/' + dataset["name"])
         change_df_column(data, dataset['target_column'], 'class')
         X, y = data.drop(columns=['class']), data['class']
         X,y = preproces_data(X,y)
         X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42, test_size=0.2)
-        xgb_default = BayesSelector('classification',X_test = X_test, y_test = y_test, max_evals=10)
-        xgb_default.fit(X_train, y_train)
-        score_xgb = accuracy_score(y_test, xgb_default.predict(X_test))
-        neptune.log_metric(dataset['name'], score_xgb)
+        print('lgbm')
+        get_lgbm_score(X_train,y_train,X_test,y_test)
+        print('xgb')
+        get_xgb_score(X_train, y_train, X_test, y_test)
+        print('cat')
+        get_cat_score(X_train, y_train, X_test, y_test)
+        print('grid')
+        get_grid_score(X_train, y_train, X_test, y_test)
+        print('bayes')
+        get_bayes_scikit_score(X_train, y_train, X_test, y_test)
+
 if __name__ == '__main__':
     
     evaluate_single()
