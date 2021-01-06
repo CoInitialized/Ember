@@ -141,7 +141,7 @@ def get_baesian_space():
                         Integer(50, 1000, name='n_estimators'),
                         Real(0.001,0.9,name='learning_rate',prior='log-uniform'),
                         Integer(3,10,name='depth'),
-                        Real(0.0001,100,name='l2_leaf_reg',prior='log-uniform'),
+                        # Real(0.0001,100,name='l2_leaf_reg',prior='log-uniform'),
                   
                 ],
                 "XGB": [
@@ -150,8 +150,8 @@ def get_baesian_space():
                         Integer(3,10,name='max_depth'),
                         Real(0.5,6,name='min_child_weight'),
                         Real(0.1,1,name="gamma"),
-                        Real(0.1,1,name="colsample_bytree"),
-                        Real(0.1,1,name="subsample"),
+                        # Real(0.1,1,name="colsample_bytree"),
+                        # Real(0.1,1,name="subsample"),
                         Real(0.0001,100,name="reg_alpha",prior='log-uniform'),
                 ],
                 "LGBM": [
@@ -160,10 +160,10 @@ def get_baesian_space():
                         Integer(3,10,name='max_depth'),
                         Integer(10,150,name='num_leaves'),
                         Real(0.1,1,name="colsample_bytree"),
-                        Real(0.1,1,name="subsample"),
-                        Real(0.0001,100,name="reg_alpha",prior='log-uniform'),
-                        Real(0.0001,100,name="reg_lambda",prior='log-uniform'),
-                        Real(0.0001,100,name="min_split_gain",prior='log-uniform'),
+                        #  Real(0.1,1,name="subsample"),
+                        # Real(0.0001,100,name="reg_alpha",prior='log-uniform'),
+                        # Real(0.0001,100,name="reg_lambda",prior='log-uniform'),
+                        # Real(0.0001,100,name="min_split_gain",prior='log-uniform'),
                 ],
     }
     return space
