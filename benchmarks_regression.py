@@ -162,7 +162,7 @@ def evaluate_single():
     path = r'datasets/regression'
     names = os.listdir(path)
     datasets = [{"name":x,"target_column":"class"} for x in names]
-
+    failed_names = []
     for dataset in tqdm.tqdm(datasets):
         try:
             data = pd.read_csv(path + '/' + dataset["name"])
