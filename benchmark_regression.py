@@ -197,7 +197,6 @@ def evaluate_single():
 
     for dataset in tqdm.tqdm(datasets[1:]):
         try:
-          neptune.log_metric(f'name', dataset['name'].split(".")[0])
           print('Training ' + dataset['name'])
           data = pd.read_csv(path + '/' + dataset["name"])
           change_df_column(data, dataset['target_column'], 'class')
@@ -206,6 +205,7 @@ def evaluate_single():
           X_train, X_test, y_train, y_test = train_test_split(X, y, stratify = y, random_state=42, test_size=0.3)
           X_val, X_test, y_val, y_test = train_test_split(X_test, y_test, stratify = y_test, random_state=42, test_size=0.5)
           neptune.create_experiment(name = dataset['name'])
+          neptune.log_metric(f'name', dataset['name'].split(".")[0])
           print('lgbm')
           get_lgbm_score(X_train,y_train,X_test,y_test)
           print('xgb')
