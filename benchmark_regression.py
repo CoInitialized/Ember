@@ -6,13 +6,23 @@ from ember.utils import DtypeSelector
 from sklearn.model_selection import train_test_split
 from ember.preprocessing import Preprocessor, GeneralEncoder, GeneralScaler
 from ember.optimize import BaesianSklearnSelector
-from sklearn.metrics import r2_score
+from sklearn.metrics import r2_score, accuracy_score
 from xgboost import XGBRegressor
 from catboost import CatBoostRegressor
 from lightgbm import LGBMRegressor
 import tqdm
 import datetime
 import json
+import neptune
+
+objective = 'classification'
+
+token = 'eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vdWkubmVwdHVuZS5haSIsImFwaV91cmwiOiJodHRwczovL3VpLm5lcHR1bmUuYWkiLCJhcGlfa2V5IjoiNTdiOWEyMDQtNWMxNi00MzY1LTk3N2ItMjY0MmI3Njk1NmUwIn0='
+project_name = 'arkadiusz-czerwinski/trisplit'
+neptune.init(project_qualified_name= project_name, # change this to your `workspace_name/project_name`
+             api_token=token, # change this to your api token
+            )
+
 
 def preproces_data(X,y, target='class', objective='regression'):
 
@@ -71,39 +81,45 @@ def get_lgbm_score(X_train,y_train,X_test,y_test):
     lgbm_default = LGBMRegressor()
     lgbm_default.fit(X_train, y_train)
     score_lgbm = r2_score(y_test, lgbm_default.predict(X_test))
+    neptune.log_metric('lgbm', score_lgbm)
     return score_lgbm
 
 def get_xgb_score(X_train,y_train,X_test,y_test):
     xgb_default = XGBRegressor()
     xgb_default.fit(X_train, y_train)
     score_xgb = r2_score(y_test, xgb_default.predict(X_test))
+    neptune.log_metric('xgb', score_xgb)
     return score_xgb
 
 def get_cat_score(X_train,y_train,X_test,y_test):
     cat_default = CatBoostRegressor(logging_level="Silent")
     cat_default.fit(X_train, y_train)
-    score_xgb = r2_score(y_test, cat_default.predict(X_test))
-    return score_xgb
-def get_gid_score(X_train,y_train,X_test,y_test,folds=3):
+    score_cat = r2_score(y_test, cat_default.predict(X_test))
+    neptune.log_metric('cat', score_cat)
+    return score_cat
+def get_grid_score(X_train,y_train,X_test,y_test,folds=5):
     model = GridSelector('regression',folds=folds, steps=6)
     model.fit(X_train, y_train)
     score = r2_score(y_test, model.predict(X_test))
+    neptune.log_metric('grid', score)
     return score
-def get_bayes_score(X_train,y_train,X_test,y_test,folds=3):
-    model = BayesSelector('regression',cv=folds, max_evals=10)
+def get_bayes_score(X_train,y_train,X_test,y_test,folds=5):
+    model = BayesSelector('regression', cv=folds, max_evals=10)
     model.fit(X_train, y_train)
     score = r2_score(y_test, model.predict(X_test))
+    neptune.log_metric('hyperopt', score)
     return score
 
-def get_bayes_scikit_score(X_train,y_train,X_test,y_test,folds=3):
-    model = BaesianSklearnSelector('regression',cv=folds, max_evals=50)
+def get_bayes_scikit_score(X_train,y_train,X_test,y_test, X_val, y_val, max_evals = 25, folds=5):
+    model = BaesianSklearnSelector('regression', X_test=X_test, y_test = y_test, max_evals= max_evals)
     model.fit(X_train, y_train)
-    score = r2_score(y_test, model.predict(X_test))
+    score = r2_score(y_val, model.predict(X_val))
+    neptune.log_metric(f'skopt-{max_evals}-iterations', score)
     return score
 
 
 import os
-def evaluate(path=r'datasets/'):
+def evaluate(path=r'datasets/regression'):
     global datasets
     failed_names = []
     scores = []
@@ -111,19 +127,19 @@ def evaluate(path=r'datasets/'):
     datasets = [{"name":x,"target_column":"class"} for x in names]
     for dataset in tqdm.tqdm(datasets[:20]):
         try:
+            neptune.create_experiment(name = str(datetime.datetime.today()).split()[0] + "_20_" + dataset['name'])
             data = pd.read_csv(path + '/' + dataset["name"])
             change_df_column(data, dataset['target_column'], 'class')
             X, y = data.drop(columns=['class']), data['class']
             X,y = preproces_data(X,y)
-            X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42, test_size=0.2)
-
+            X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42, test_size=0.2, stratify = y)
             score = {
+                "bayes_scikit": get_bayes_scikit_score(X_train, y_train, X_test, y_test),
                 'lgbm': get_lgbm_score(X_train,y_train,X_test,y_test),
                 'xgb': get_xgb_score(X_train, y_train, X_test, y_test),
                 'cat': get_cat_score(X_train, y_train, X_test, y_test),
                 'bayes_hyperopt': get_bayes_score(X_train, y_train, X_test, y_test),
-                "bayes_scikit": get_bayes_scikit_score(X_train, y_train, X_test, y_test),
-                "grid": get_gid_score(X_train, y_train, X_test, y_test),
+                "grid": get_grid_score(X_train, y_train, X_test, y_test),
                 'name': dataset['name']
             }
 
@@ -139,7 +155,43 @@ def evaluate(path=r'datasets/'):
         json.dump(scores, outfile)
     return scores
 
-if __name__ == '__main__':
-    evaluate()
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+def evaluate_single():
+
+    path = r'datasets/regression'
+    names = os.listdir(path)
+    names = sorted(names)
+    datasets = [{"name":x,"target_column":"class"} for x in names]
+
+    for dataset in tqdm.tqdm(datasets[1:]):
+        try:
+          print('Training ' + dataset['name'])
+          data = pd.read_csv(path + '/' + dataset["name"])
+          change_df_column(data, dataset['target_column'], 'class')
+          X, y = data.drop(columns=['class']), data['class']
+          X,y = preproces_data(X,y)
+          X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42, test_size=0.3)
+          X_val, X_test, y_val, y_test = train_test_split(X_test, y_test, random_state=42, test_size=0.5)
+          neptune.create_experiment(name = dataset['name'])
+          print('lgbm')
+          get_lgbm_score(X_train,y_train,X_test,y_test)
+          print('xgb')
+          get_xgb_score(X_train, y_train, X_test, y_test)
+          print('cat')
+          get_cat_score(X_train, y_train, X_test, y_test)
+          # print('grid')
+          # get_grid_score(X_train, y_train, X_test, y_test)
+          print('bayes-10')
+          get_bayes_scikit_score(X_train, y_train, X_test, y_test, X_val, y_val, max_evals = 10)
+          print('bayes-15')
+          get_bayes_scikit_score(X_train, y_train, X_test, y_test, X_val, y_val, max_evals = 15)
+          print('bayes-25')
+          get_bayes_scikit_score(X_train, y_train, X_test, y_test, X_val, y_val, max_evals = 25)
+          print('bayes-50')
+          get_bayes_scikit_score(X_train, y_train, X_test, y_test, X_val, y_val, max_evals = 50)
+        except:
+          pass
+if __name__ == '__main__':
+    
+    evaluate_single()
+
