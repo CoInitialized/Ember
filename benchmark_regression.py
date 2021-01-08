@@ -206,7 +206,7 @@ def evaluate_single():
           X_val, X_test, y_val, y_test = train_test_split(X_test, y_test, random_state=42, test_size=0.5)
           neptune.create_experiment(name = dataset['name'])
           print("ch1")
-          neptune.log_metric(f'name', dataset['name'].split(".")[0])
+          neptune.log_text(f'name', dataset['name'].split(".")[0])
           print('lgbm')
           get_lgbm_score(X_train,y_train,X_test,y_test)
           print('xgb')
