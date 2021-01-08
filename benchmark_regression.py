@@ -197,6 +197,7 @@ def evaluate_single():
 
     for dataset in tqdm.tqdm(datasets[1:]):
         try:
+         neptune.log_metric(f'name', dataset['name'].split(".")[0])
           print('Training ' + dataset['name'])
           data = pd.read_csv(path + '/' + dataset["name"])
           change_df_column(data, dataset['target_column'], 'class')
