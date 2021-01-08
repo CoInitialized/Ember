@@ -202,8 +202,8 @@ def evaluate_single():
           change_df_column(data, dataset['target_column'], 'class')
           X, y = data.drop(columns=['class']), data['class']
           X,y = preproces_data(X,y)
-          X_train, X_test, y_train, y_test = train_test_split(X, y, stratify = y, random_state=42, test_size=0.3)
-          X_val, X_test, y_val, y_test = train_test_split(X_test, y_test, stratify = y_test, random_state=42, test_size=0.5)
+          X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42, test_size=0.3)
+          X_val, X_test, y_val, y_test = train_test_split(X_test, y_test, random_state=42, test_size=0.5)
           neptune.create_experiment(name = dataset['name'])
           neptune.log_metric(f'name', dataset['name'].split(".")[0])
           print('lgbm')
