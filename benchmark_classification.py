@@ -7,6 +7,7 @@ from sklearn.model_selection import train_test_split
 from ember.preprocessing import Preprocessor, GeneralEncoder, GeneralScaler
 from ember.optimize import BaesianSklearnSelector
 from sklearn.metrics import r2_score, accuracy_score
+from ember.search_space import get_baesian_space
 from xgboost import XGBClassifier
 from catboost import CatBoostClassifier
 from lightgbm import LGBMClassifier
@@ -14,11 +15,13 @@ import tqdm
 import datetime
 import json
 import neptune
+from skopt import BayesSearchCV
+
 
 objective = 'classification'
 
 token = 'eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vdWkubmVwdHVuZS5haSIsImFwaV91cmwiOiJodHRwczovL3VpLm5lcHR1bmUuYWkiLCJhcGlfa2V5IjoiYTFlODM1OWItZWMxMC00Yzg1LWE0YmMtMzkwNmUxYWI1ZmZlIn0='
-project_name = 'damiankucharski/trisplit'
+project_name = 'damiankucharski/bayes-cv-split'
 neptune.init(project_qualified_name= project_name, # change this to your `workspace_name/project_name`
              api_token=token, # change this to your api token
             )
@@ -110,11 +113,36 @@ def get_bayes_score(X_train,y_train,X_test,y_test,folds=5):
     neptune.log_metric('hyperopt', score)
     return score
 
-def get_bayes_scikit_score(X_train,y_train,X_test,y_test, X_val, y_val, max_evals = 25, folds=5):
+def get_bayes_scikit_score(X_train,y_train,X_test,y_test, X_val=None, y_val= None, max_evals = 25, folds=5):
+
     model = BaesianSklearnSelector('classification', X_test=X_test, y_test = y_test, max_evals= max_evals)
     model.fit(X_train, y_train)
     score = accuracy_score(y_val, model.predict(X_val))
     neptune.log_metric(f'skopt-{max_evals}-iterations', score)
+    return score
+
+# def get_bayes_scikit_score_cv(X_train,y_train,X_test,y_test, X_val=None, y_val= None, max_evals = 25, folds=5):
+
+#     model = BaesianSklearnSelector('classification', cv=folds, max_evals = max_evals)
+#     model.fit(X_train, y_train)
+#     score = accuracy_score(y_test, model.predict(X_test))
+#     neptune.log_metric(f'skopt-{max_evals}-iterations-{cv}-folds', score)
+#     return score
+
+def get_bayes_scikit_score_cv(X_train,y_train,X_test,y_test, X_val=None, y_val= None, max_evals = 25, folds=5):
+
+    space = get_baesian_space()
+    opt_cat = BayesSearchCV(CatBoostClassifier(logging_level='Silent'), space['CAT'], n_iter = max_evals, random_state = 0)
+    opt_xgb = BayesSearchCV(XGBClassifier(), space['XGB'], n_iter = max_evals, random_state = 0)
+    opt_lgbm = BayesSearchCV(LGBMClassifier(), space['LGBM'], n_iter = max_evals, random_state = 0)
+    _ = opt_cat.fit(X_train, y_train)
+    __ = opt_xgb.fit(X_train, y_train)
+    ___ = opt_lgbm.fit(X_train, y_train)
+
+    scores = [opt_cat.score(X_test, y_test), opt_xgb.score(X_test, y_test), opt_lgbm.score(X_test, y_test)]
+    score = max(scores)
+
+    neptune.log_metric(f'skopt-{max_evals}-iterations-{cv}-folds', score)
     return score
 
 
@@ -181,16 +209,18 @@ def evaluate_single():
           get_cat_score(X_train, y_train, X_test, y_test)
           # print('grid')
           # get_grid_score(X_train, y_train, X_test, y_test)
-          print('bayes-10')
-          get_bayes_scikit_score(X_train, y_train, X_test, y_test, X_val, y_val, max_evals = 10)
-          print('bayes-15')
-          get_bayes_scikit_score(X_train, y_train, X_test, y_test, X_val, y_val, max_evals = 15)
-          print('bayes-25')
-          get_bayes_scikit_score(X_train, y_train, X_test, y_test, X_val, y_val, max_evals = 25)
-          print('bayes-50')
-          get_bayes_scikit_score(X_train, y_train, X_test, y_test, X_val, y_val, max_evals = 50)
-        except:
-          pass
+          print('bayes-cv')
+          get_bayes_scikit_score_cv(X_train, y_train, X_test, y_test, folds = 5, max_evals = 25)
+        #   print('bayes-10')
+        #   get_bayes_scikit_score(X_train, y_train, X_test, y_test, X_val, y_val, max_evals = 10)
+        #   print('bayes-15')
+        #   get_bayes_scikit_score(X_train, y_train, X_test, y_test, X_val, y_val, max_evals = 15)
+        #   print('bayes-25')
+        #   get_bayes_scikit_score(X_train, y_train, X_test, y_test, X_val, y_val, max_evals = 25)
+         
+        except Exception as ex:
+          print(ex)
+          input()
 if __name__ == '__main__':
     
     evaluate_single()

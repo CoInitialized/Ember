@@ -130,46 +130,81 @@ def get_bayes_params(cat = True, xgb = True, lgbm = True, **kwargs):
     bayes_params =  hp.choice('model_type', lista) 
     return bayes_params
 
-def get_baesian_space():
+def get_baesian_space(dictem = False):
     """Function returning search space for skopt
 
     Returns:
         dict: python dictionary containing list with search spaces for given frameworks
     """
-    space = {
-                "CAT": [
-                        Integer(50, 1050, name='n_estimators'),
-                        Real(0.001,1.0,name='learning_rate',prior='log-uniform'),
-                        Integer(1,10,name='depth'),
-                        Real(1e-9, 10, name = 'random_strength', prior = 'log-uniform'),
-                        Real(0.0, 1.0, name = 'bagging_temperature'),
-                        Integer(1, 255, name = 'border_count'),
+    if not dictem:
+        space = {
+                    "CAT": [
+                            Integer(50, 1050, name='n_estimators'),
+                            Real(0.001,1.0,name='learning_rate',prior='log-uniform'),
+                            Integer(1,10,name='depth'),
+                            Real(1e-9, 10, name = 'random_strength', prior = 'log-uniform'),
+                            Real(0.0, 1.0, name = 'bagging_temperature'),
+                            Integer(1, 255, name = 'border_count'),
 
-                        
-                        # Real(0.0001,100,name='l2_leaf_reg',prior='log-uniform'),
-                ],
+                            
+                            # Real(0.0001,100,name='l2_leaf_reg',prior='log-uniform'),
+                    ],
 
 
-                "XGB": [
-                        Integer(50, 1000, name='n_estimators'),
-                        Real(0.001,0.9,name='learning_rate',prior='log-uniform'),
-                        Integer(3,10,name='max_depth'),
-                        Real(0.5,6,name='min_child_weight'),
-                        Real(0.1,1,name="gamma"),
-                        # Real(0.1,1,name="colsample_bytree"),
-                        # Real(0.1,1,name="subsample"),
-                        Real(0.0001,100,name="reg_alpha",prior='log-uniform'),
-                ],
-                "LGBM": [
-                        Integer(50, 1000, name='n_estimators'),
-                        Real(0.001,0.9,name='learning_rate',prior='log-uniform'),
-                        Integer(3,10,name='max_depth'),
-                        Integer(10,150,name='num_leaves'),
-                        Real(0.1,1,name="colsample_bytree"),
-                        #  Real(0.1,1,name="subsample"),
-                        # Real(0.0001,100,name="reg_alpha",prior='log-uniform'),
-                        # Real(0.0001,100,name="reg_lambda",prior='log-uniform'),
-                        # Real(0.0001,100,name="min_split_gain",prior='log-uniform'),
-                ],
-    }
+                    "XGB": [
+                            Integer(50, 1000, name='n_estimators'),
+                            Real(0.001,0.9,name='learning_rate',prior='log-uniform'),
+                            Integer(3,10,name='max_depth'),
+                            Real(0.5,6,name='min_child_weight'),
+                            Real(0.1,1,name="gamma"),
+                            # Real(0.1,1,name="colsample_bytree"),
+                            # Real(0.1,1,name="subsample"),
+                            Real(0.0001,100,name="reg_alpha",prior='log-uniform'),
+                    ],
+                    "LGBM": [
+                            Integer(50, 1000, name='n_estimators'),
+                            Real(0.001,0.9,name='learning_rate',prior='log-uniform'),
+                            Integer(3,10,name='max_depth'),
+                            Integer(10,150,name='num_leaves'),
+                            Real(0.1,1,name="colsample_bytree"),
+                            #  Real(0.1,1,name="subsample"),
+                            # Real(0.0001,100,name="reg_alpha",prior='log-uniform'),
+                            # Real(0.0001,100,name="reg_lambda",prior='log-uniform'),
+                            # Real(0.0001,100,name="min_split_gain",prior='log-uniform'),
+                    ],
+        }
+    else:
+        space = {
+                    "CAT": {
+                            'n_estimators' : Integer(50, 1050),
+                            'learning_rate' : Real(0.001,1.0,name='learning_rate',prior='log-uniform'),
+                            'depth' : Integer(1,10,name='depth'),
+                            'random_strength' : Real(1e-9, 10, name = 'random_strength', prior = 'log-uniform'),
+                            'bagging_temperature' : Real(0.0, 1.0, name = 'bagging_temperature'),
+                            'border_count' : Integer(1, 255, name = 'border_count'),
+                    },
+
+
+                    "XGB": {
+                            'n_estimators' : Integer(50, 1000, name='n_estimators'),
+                            'learning_rate':Real(0.001,0.9,name='learning_rate',prior='log-uniform'),
+                            'max_depth':Integer(3,10,name='max_depth'),
+                            'min_child_weight':Real(0.5,6,name='min_child_weight'),
+                            'gamma': Real(0.1,1,name="gamma"),
+                            # Real(0.1,1,name="colsample_bytree"),
+                            # Real(0.1,1,name="subsample"),
+                            'reg_alpha': Real(0.0001,100,name="reg_alpha",prior='log-uniform'),
+                    },
+                    "LGBM": {
+                            'n_estimators' : Integer(50, 1000, name='n_estimators'),
+                            'learning_rate': Real(0.001,0.9,name='learning_rate',prior='log-uniform'),
+                            'max_depth': Integer(3,10,name='max_depth'),
+                            'num_leaves' : Integer(10,150,name='num_leaves'),
+                            'colsample_bytree': Real(0.1,1,name="colsample_bytree"),
+                            #  Real(0.1,1,name="subsample"),
+                            # Real(0.0001,100,name="reg_alpha",prior='log-uniform'),
+                            # Real(0.0001,100,name="reg_lambda",prior='log-uniform'),
+                            # Real(0.0001,100,name="min_split_gain",prior='log-uniform'),
+                    },
+        }
     return space
