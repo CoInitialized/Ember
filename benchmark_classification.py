@@ -16,6 +16,7 @@ import datetime
 import json
 import neptune
 from skopt import BayesSearchCV
+from skopt.callbacks import DeltaYStopper, DeltaXStopper
 
 
 objective = 'classification'
@@ -129,20 +130,20 @@ def get_bayes_scikit_score(X_train,y_train,X_test,y_test, X_val=None, y_val= Non
 #     neptune.log_metric(f'skopt-{max_evals}-iterations-{cv}-folds', score)
 #     return score
 
-def get_bayes_scikit_score_cv(X_train,y_train,X_test,y_test, X_val=None, y_val= None, max_evals = 25, folds=5):
+def get_bayes_scikit_score_cv(X_train,y_train,X_test,y_test, X_val=None, y_val= None, max_evals = 25, folds=5, original = None):
 
-    space = get_baesian_space()
+    space = get_baesian_space(dictem = True)
     opt_cat = BayesSearchCV(CatBoostClassifier(logging_level='Silent'), space['CAT'], n_iter = max_evals, random_state = 0)
     opt_xgb = BayesSearchCV(XGBClassifier(), space['XGB'], n_iter = max_evals, random_state = 0)
     opt_lgbm = BayesSearchCV(LGBMClassifier(), space['LGBM'], n_iter = max_evals, random_state = 0)
-    _ = opt_cat.fit(X_train, y_train)
-    __ = opt_xgb.fit(X_train, y_train)
-    ___ = opt_lgbm.fit(X_train, y_train)
+    _ = opt_cat.fit(original[0], original[2], callback = DeltaYStopper(0.01))
+    __ = opt_xgb.fit(X_train, y_train, callback = DeltaYStopper(0.01))
+    ___ = opt_lgbm.fit(X_train, y_train, callback = DeltaYStopper(0.01))
 
-    scores = [opt_cat.score(X_test, y_test), opt_xgb.score(X_test, y_test), opt_lgbm.score(X_test, y_test)]
+    scores = [opt_cat.score(original[1], original[3]), opt_xgb.score(X_test, y_test), opt_lgbm.score(X_test, y_test)]
     score = max(scores)
 
-    neptune.log_metric(f'skopt-{max_evals}-iterations-{cv}-folds', score)
+    neptune.log_metric(f'skopt-{max_evals}-iterations-{folds}-folds', score)
     return score
 
 
@@ -197,20 +198,23 @@ def evaluate_single():
           data = pd.read_csv(path + '/' + dataset["name"])
           change_df_column(data, dataset['target_column'], 'class')
           X, y = data.drop(columns=['class']), data['class']
+          
+          _X_train, _X_test, _y_train, _y_test = train_test_split(X, y, stratify = y, random_state=42, test_size=0.3)
+          print('cat')
+          get_cat_score(_X_train, _y_train, _X_test, _y_test)
+          
           X,y = preproces_data(X,y)
           X_train, X_test, y_train, y_test = train_test_split(X, y, stratify = y, random_state=42, test_size=0.3)
-          X_val, X_test, y_val, y_test = train_test_split(X_test, y_test, stratify = y_test, random_state=42, test_size=0.5)
+
           neptune.create_experiment(name = dataset['name'])
           print('lgbm')
           get_lgbm_score(X_train,y_train,X_test,y_test)
           print('xgb')
           get_xgb_score(X_train, y_train, X_test, y_test)
-          print('cat')
-          get_cat_score(X_train, y_train, X_test, y_test)
           # print('grid')
           # get_grid_score(X_train, y_train, X_test, y_test)
           print('bayes-cv')
-          get_bayes_scikit_score_cv(X_train, y_train, X_test, y_test, folds = 5, max_evals = 25)
+          get_bayes_scikit_score_cv(X_train, y_train, X_test, y_test, folds = 5, max_evals = 25, original = [_X_train, _X_test, _y_train, _y_test])
         #   print('bayes-10')
         #   get_bayes_scikit_score(X_train, y_train, X_test, y_test, X_val, y_val, max_evals = 10)
         #   print('bayes-15')
