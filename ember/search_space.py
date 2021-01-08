@@ -147,7 +147,7 @@ def get_baesian_space():
 
                         
                         # Real(0.0001,100,name='l2_leaf_reg',prior='log-uniform'),
-                ]
+                ],
 
 
                 "XGB": [
