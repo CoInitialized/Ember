@@ -135,7 +135,7 @@ def get_bayes_scikit_score(X_train,y_train,X_test,y_test, X_val=None, y_val= Non
 
 def get_bayes_scikit_score_cv(X_train,y_train,X_test,y_test, X_val=None, y_val= None, max_evals = 25, folds=5):
 
-    space = get_baesian_space()
+    space = get_baesian_space(dictem=True)
     opt_cat = BayesSearchCV(CatBoostRegressor(logging_level='Silent'), space['CAT'], n_iter = max_evals, random_state = 0)
     opt_xgb = BayesSearchCV(XGBRegressor(), space['XGB'], n_iter = max_evals, random_state = 0)
     opt_lgbm = BayesSearchCV(LGBMRegressor(), space['LGBM'], n_iter = max_evals, random_state = 0)
