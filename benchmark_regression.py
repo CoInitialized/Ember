@@ -121,17 +121,10 @@ def get_bayes_scikit_score(X_train,y_train,X_test,y_test, X_val=None, y_val= Non
 
     model = BaesianSklearnSelector(objective, X_test=X_test, y_test = y_test, max_evals= max_evals)
     model.fit(X_train, y_train)
-    score = accuracy_score(y_val, model.predict(X_val))
+    score = r2_score(y_val, model.predict(X_val))
     neptune.log_metric(f'skopt-{max_evals}-iterations', score)
     return score
 
-# def get_bayes_scikit_score_cv(X_train,y_train,X_test,y_test, X_val=None, y_val= None, max_evals = 25, folds=5):
-
-#     model = BaesianSklearnSelector('classification', cv=folds, max_evals = max_evals)
-#     model.fit(X_train, y_train)
-#     score = accuracy_score(y_test, model.predict(X_test))
-#     neptune.log_metric(f'skopt-{max_evals}-iterations-{cv}-folds', score)
-#     return score
 
 def get_bayes_scikit_score_cv(X_train,y_train,X_test,y_test, X_val=None, y_val= None, max_evals = 25, folds=5):
 
