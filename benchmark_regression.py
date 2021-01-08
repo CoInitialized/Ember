@@ -190,7 +190,7 @@ def evaluate(path=r'datasets/classification'):
 
 def evaluate_single():
 
-    path = r'datasets/classification'
+    path = r'datasets/regression'
     names = os.listdir(path)
     names = sorted(names)
     datasets = [{"name":x,"target_column":"class"} for x in names]
