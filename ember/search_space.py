@@ -138,12 +138,18 @@ def get_baesian_space():
     """
     space = {
                 "CAT": [
-                        Integer(50, 1000, name='n_estimators'),
-                        Real(0.001,0.9,name='learning_rate',prior='log-uniform'),
-                        Integer(3,10,name='depth'),
+                        Integer(50, 1050, name='n_estimators'),
+                        Real(0.001,1.0,name='learning_rate',prior='log-uniform'),
+                        Integer(1,10,name='depth'),
+                        Real(1e-9, 10, name = 'random_strength', prior = 'log-uniform'),
+                        Real(0.0, 1.0, name = 'bagging_temperature'),
+                        Integer(1, 255, name = 'border_count'),
+
+                        
                         # Real(0.0001,100,name='l2_leaf_reg',prior='log-uniform'),
-                  
-                ],
+                ]
+
+
                 "XGB": [
                         Integer(50, 1000, name='n_estimators'),
                         Real(0.001,0.9,name='learning_rate',prior='log-uniform'),

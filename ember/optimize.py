@@ -18,6 +18,7 @@ from skopt.utils import use_named_args
 from skopt import gp_minimize
 from functools import partial
 from .search_space import get_baesian_space
+import tqdm 
 
 def fix_hyperparams(params):
     """Helper function to be removed and solved with better search spaces definitions
@@ -537,7 +538,7 @@ class BaesianSklearnSelector(Selector):
                 kf = KFold(n_splits=self.cv)
                 split = kf.split(self.X_train)
                 
-            for train_index, test_index in split:
+            for train_index, test_index in tqdm.tqdm(split):
                 X_train, X_test = self.X_train[train_index], self.X_train[test_index]
                 y_train, y_test = self.y_train[train_index], self.y_train[test_index]
                 model = copy.deepcopy(_model)   
