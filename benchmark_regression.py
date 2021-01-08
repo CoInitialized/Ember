@@ -146,7 +146,7 @@ def get_bayes_scikit_score_cv(X_train,y_train,X_test,y_test, X_val=None, y_val= 
     scores = [opt_cat.score(X_test, y_test), opt_xgb.score(X_test, y_test), opt_lgbm.score(X_test, y_test)]
     score = max(scores)
 
-    neptune.log_metric(f'skopt-{max_evals}-iterations-{cv}-folds', score)
+    neptune.log_metric(f'skopt-{max_evals}-iterations-{folds}-folds', score)
     return score
 
 
