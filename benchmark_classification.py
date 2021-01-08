@@ -18,7 +18,7 @@ import neptune
 objective = 'classification'
 
 token = 'eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vdWkubmVwdHVuZS5haSIsImFwaV91cmwiOiJodHRwczovL3VpLm5lcHR1bmUuYWkiLCJhcGlfa2V5IjoiYTFlODM1OWItZWMxMC00Yzg1LWE0YmMtMzkwNmUxYWI1ZmZlIn0='
-project_name = 'damiankucharski/Next20'
+project_name = 'damiankucharski/trisplit'
 neptune.init(project_qualified_name= project_name, # change this to your `workspace_name/project_name`
              api_token=token, # change this to your api token
             )
@@ -110,11 +110,11 @@ def get_bayes_score(X_train,y_train,X_test,y_test,folds=5):
     neptune.log_metric('hyperopt', score)
     return score
 
-def get_bayes_scikit_score(X_train,y_train,X_test,y_test,folds=5):
-    model = BaesianSklearnSelector('classification', X_test=X_test, y_test = y_test, max_evals=100)
+def get_bayes_scikit_score(X_train,y_train,X_test,y_test, X_val, y_val, max_evals = 25, folds=5):
+    model = BaesianSklearnSelector('classification', X_test=X_test, y_test = y_test, max_evals= max_evals)
     model.fit(X_train, y_train)
-    score = accuracy_score(y_test, model.predict(X_test))
-    neptune.log_metric('skopt', score)
+    score = accuracy_score(y_val, model.predict(X_val))
+    neptune.log_metric(f'skopt-{max_evals}-iterations', score)
     return score
 
 
@@ -160,29 +160,38 @@ def evaluate_single():
 
     path = r'datasets/classification'
     names = os.listdir(path)
+    names = sorted(names)
     datasets = [{"name":x,"target_column":"class"} for x in names]
 
-    for dataset in tqdm.tqdm(datasets):
-        print('Training ' + dataset['name'])
-        neptune.create_experiment(name = dataset['name'])
-        data = pd.read_csv(path + '/' + dataset["name"])
-        change_df_column(data, dataset['target_column'], 'class')
-        X, y = data.drop(columns=['class']), data['class']
-        X,y = preproces_data(X,y)
-        X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42, test_size=0.2)
-        print('lgbm')
-        get_lgbm_score(X_train,y_train,X_test,y_test)
-        print('xgb')
-        get_xgb_score(X_train, y_train, X_test, y_test)
-        print('cat')
-        get_cat_score(X_train, y_train, X_test, y_test)
-        print('grid')
-        get_grid_score(X_train, y_train, X_test, y_test)
-        print('bayes')
-        get_bayes_scikit_score(X_train, y_train, X_test, y_test)
-
+    for dataset in tqdm.tqdm(datasets[1:]):
+        try:
+          print('Training ' + dataset['name'])
+          data = pd.read_csv(path + '/' + dataset["name"])
+          change_df_column(data, dataset['target_column'], 'class')
+          X, y = data.drop(columns=['class']), data['class']
+          X,y = preproces_data(X,y)
+          X_train, X_test, y_train, y_test = train_test_split(X, y, stratify = y, random_state=42, test_size=0.3)
+          X_val, X_test, y_val, y_test = train_test_split(X_test, y_test, stratify = y_test, random_state=42, test_size=0.5)
+          neptune.create_experiment(name = dataset['name'])
+          print('lgbm')
+          get_lgbm_score(X_train,y_train,X_test,y_test)
+          print('xgb')
+          get_xgb_score(X_train, y_train, X_test, y_test)
+          print('cat')
+          get_cat_score(X_train, y_train, X_test, y_test)
+          # print('grid')
+          # get_grid_score(X_train, y_train, X_test, y_test)
+          print('bayes-10')
+          get_bayes_scikit_score(X_train, y_train, X_test, y_test, X_val, y_val, max_evals = 10)
+          print('bayes-15')
+          get_bayes_scikit_score(X_train, y_train, X_test, y_test, X_val, y_val, max_evals = 15)
+          print('bayes-25')
+          get_bayes_scikit_score(X_train, y_train, X_test, y_test, X_val, y_val, max_evals = 25)
+          print('bayes-50')
+          get_bayes_scikit_score(X_train, y_train, X_test, y_test, X_val, y_val, max_evals = 50)
+        except:
+          pass
 if __name__ == '__main__':
     
     evaluate_single()
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
