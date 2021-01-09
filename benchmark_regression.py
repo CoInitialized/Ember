@@ -154,7 +154,7 @@ def evaluate_single():
           X, y = data.drop(columns=['class']), data['class']
           neptune.log_text("name", dataset["name"].split(".")[0])
           X,y = preproces_data(X,y)
-          X_train, X_test, y_train, y_test = train_test_split(X, y, stratify = y, random_state=42, test_size=0.3)
+          X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42, test_size=0.3)
           print('cat')
           get_cat_score(X_train, y_train, X_test, y_test)
           print('lgbm')
