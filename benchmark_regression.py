@@ -17,6 +17,7 @@ import json
 import neptune
 from skopt import BayesSearchCV
 from skopt.callbacks import DeltaYStopper, DeltaXStopper
+import os
 
 
 objective = 'regression'
