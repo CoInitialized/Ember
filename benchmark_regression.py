@@ -196,6 +196,7 @@ def evaluate_single():
         try:
           neptune.create_experiment(name = dataset['name'])
           print('Training ' + dataset['name'])
+          neptune.log_text(dataset['name'].split(".")[0])
           data = pd.read_csv(path + '/' + dataset["name"])
           change_df_column(data, dataset['target_column'], 'class')
           X, y = data.drop(columns=['class']), data['class']
