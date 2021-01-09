@@ -155,7 +155,7 @@ def evaluate_single():
           X,y = preproces_data(X,y)
           X_train, X_test, y_train, y_test = train_test_split(X, y, stratify = y, random_state=42, test_size=0.3)
           print('cat')
-          get_cat_score(_X_train, _y_train, _X_test, _y_test)
+          get_cat_score(X_train, y_train, X_test, y_test)
           print('lgbm')
           get_lgbm_score(X_train,y_train,X_test,y_test)
           print('xgb')
