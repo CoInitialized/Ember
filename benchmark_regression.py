@@ -146,7 +146,7 @@ def evaluate_single():
     names = sorted(names)
     datasets = [{"name":x,"target_column":"class"} for x in names]
 
-    for dataset in tqdm.tqdm(datasets[1:]):
+    for dataset in tqdm.tqdm(datasets):
         try:
           neptune.create_experiment(name = dataset['name'])
           print('Training ' + dataset['name'])
@@ -166,12 +166,11 @@ def evaluate_single():
           # get_grid_score(X_train, y_train, X_test, y_test)
           print('bayes-cv')
           get_bayes_scikit_score_cv(X_train, y_train, X_test, y_test, folds = 5, max_evals = 30)
-        #   print('bayes-10')
-        #   get_bayes_scikit_score(X_train, y_train, X_test, y_test, X_val, y_val, max_evals = 10)
-        #   print('bayes-15')
-        #   get_bayes_scikit_score(X_train, y_train, X_test, y_test, X_val, y_val, max_evals = 15)
-        #   print('bayes-25')
-        #   get_bayes_scikit_score(X_train, y_train, X_test, y_test, X_val, y_val, max_evals = 25)
+          print('bayes-cv')
+          get_bayes_scikit_score_cv(X_train, y_train, X_test, y_test, folds = 5, max_evals = 15)
+          print('bayes-cv')
+          get_bayes_scikit_score_cv(X_train, y_train, X_test, y_test, folds = 5, max_evals = 10)
+
          
         except Exception as ex:
           print(ex)
