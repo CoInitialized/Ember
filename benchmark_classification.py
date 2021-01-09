@@ -173,7 +173,7 @@ def evaluate_single():
          
         except Exception as ex:
           print(ex)
-          neptune.log_metric('failed', 'yes')
+          neptune.log_text('failed', 'yes')
 if __name__ == '__main__':
     
     evaluate_single()
