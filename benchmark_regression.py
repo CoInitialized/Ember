@@ -6,7 +6,7 @@ from ember.utils import DtypeSelector
 from sklearn.model_selection import train_test_split
 from ember.preprocessing import Preprocessor, GeneralEncoder, GeneralScaler
 from ember.optimize import BaesianSklearnSelector
-from sklearn.metrics import r2_score, accuracy_score
+from sklearn.metrics import r2_score
 from ember.search_space import get_baesian_space
 from xgboost import XGBRegressor
 from catboost import CatBoostRegressor
@@ -17,12 +17,13 @@ import json
 import neptune
 from skopt import BayesSearchCV
 from skopt.callbacks import DeltaYStopper, DeltaXStopper
+import os
 
 
 objective = 'regression'
 
 token = 'eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vdWkubmVwdHVuZS5haSIsImFwaV91cmwiOiJodHRwczovL3VpLm5lcHR1bmUuYWkiLCJhcGlfa2V5IjoiNTdiOWEyMDQtNWMxNi00MzY1LTk3N2ItMjY0MmI3Njk1NmUwIn0='
-project_name = 'arkadiusz-czerwinski/bayes-cv-split'
+project_name = 'arkadiusz-czerwinski/bayes-cv-split-200-overfit'
 neptune.init(project_qualified_name= project_name, # change this to your `workspace_name/project_name`
              api_token=token, # change this to your api token
             )
@@ -122,68 +123,23 @@ def get_bayes_scikit_score(X_train,y_train,X_test,y_test, X_val=None, y_val= Non
     neptune.log_metric(f'skopt-{max_evals}-iterations', score)
     return score
 
-# def get_bayes_scikit_score_cv(X_train,y_train,X_test,y_test, X_val=None, y_val= None, max_evals = 25, folds=5):
-
-#     model = BaesianSklearnSelector('classification', cv=folds, max_evals = max_evals)
-#     model.fit(X_train, y_train)
-#     score = accuracy_score(y_test, model.predict(X_test))
-#     neptune.log_metric(f'skopt-{max_evals}-iterations-{cv}-folds', score)
-#     return score
-
 def get_bayes_scikit_score_cv(X_train,y_train,X_test,y_test, X_val=None, y_val= None, max_evals = 25, folds=5, original = None):
 
     space = get_baesian_space(dictem = True)
     opt_cat = BayesSearchCV(CatBoostRegressor(logging_level='Silent'), space['CAT'], n_iter = max_evals, random_state = 0,scoring = 'r2')
     opt_xgb = BayesSearchCV(XGBRegressor(), space['XGB'], n_iter = max_evals, random_state = 0,scoring = 'r2')
     opt_lgbm = BayesSearchCV(LGBMRegressor(), space['LGBM'], n_iter = max_evals, random_state = 0,scoring = 'r2')
-    _ = opt_cat.fit(original[0], original[2], callback = DeltaYStopper(0.01))
-    __ = opt_xgb.fit(X_train, y_train, callback = DeltaYStopper(0.01))
-    ___ = opt_lgbm.fit(X_train, y_train, callback = DeltaYStopper(0.01))
+    _ = opt_cat.fit(X_train, y_train, callback = [DeltaXStopper(0.001), DeltaYStopper(0.001)])
+    __ = opt_xgb.fit(X_train, y_train, callback = [DeltaXStopper(0.001), DeltaYStopper(0.001)])
+    ___ = opt_lgbm.fit(X_train, y_train, callback = [DeltaXStopper(0.001), DeltaYStopper(0.001)])
 
-    scores = [opt_cat.score(original[1], original[3]), opt_xgb.score(X_test, y_test), opt_lgbm.score(X_test, y_test)]
+    scores = [opt_cat.score(X_test, y_test), opt_xgb.score(X_test, y_test), opt_lgbm.score(X_test, y_test)]
+    scores_overfit = [opt_cat.best_score_, opt_xgb.best_score_, opt_lgbm.best_score_]
     score = max(scores)
-
+    score_overfit = max(scores_overfit)
     neptune.log_metric(f'skopt-{max_evals}-iterations-{folds}-folds', score)
+    neptune.log_metric(f'skopt-{max_evals}-iterations-{folds}-folds-overfit', score_overfit)
     return score
-
-
-import os
-def evaluate(path=r'datasets/regression'):
-    global datasets
-    failed_names = []
-    scores = []
-    names = os.listdir(path)
-    datasets = [{"name":x,"target_column":"class"} for x in names]
-    for dataset in tqdm.tqdm(datasets[:20]):
-        try:
-            neptune.create_experiment(name = str(datetime.datetime.today()).split()[0] + "_20_" + dataset['name'])
-            data = pd.read_csv(path + '/' + dataset["name"])
-            change_df_column(data, dataset['target_column'], 'class')
-            X, y = data.drop(columns=['class']), data['class']
-            X,y = preproces_data(X,y)
-            X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42, test_size=0.2, stratify = y)
-            score = {
-                "bayes_scikit": get_bayes_scikit_score(X_train, y_train, X_test, y_test),
-                'lgbm': get_lgbm_score(X_train,y_train,X_test,y_test),
-                'xgb': get_xgb_score(X_train, y_train, X_test, y_test),
-                'cat': get_cat_score(X_train, y_train, X_test, y_test),
-                'bayes_hyperopt': get_bayes_score(X_train, y_train, X_test, y_test),
-                "grid": get_grid_score(X_train, y_train, X_test, y_test),
-                'name': dataset['name']
-            }
-
-            scores.append(score)
-            print(score)
-
-        except Exception as ex:
-            print(f'{dataset["name"]} failed')
-            print(ex)
-            failed_names.append(dataset["name"])
-
-    with open(str(datetime.datetime.today()).split()[0] + "_20" + ".json", 'w') as outfile:
-        json.dump(scores, outfile)
-    return scores
-
 
 def evaluate_single():
 
@@ -192,22 +148,18 @@ def evaluate_single():
     names = sorted(names)
     datasets = [{"name":x,"target_column":"class"} for x in names]
 
-    for dataset in tqdm.tqdm(datasets[1:]):
+    for dataset in tqdm.tqdm(datasets):
         try:
           neptune.create_experiment(name = dataset['name'])
           print('Training ' + dataset['name'])
-          neptune.log_text("name" ,dataset['name'].split(".")[0])
           data = pd.read_csv(path + '/' + dataset["name"])
           change_df_column(data, dataset['target_column'], 'class')
           X, y = data.drop(columns=['class']), data['class']
-          
-          _X_train, _X_test, _y_train, _y_test = train_test_split(X, y, random_state=42, test_size=0.3)
-          print('cat')
-          get_cat_score(_X_train, _y_train, _X_test, _y_test)
-          
+          neptune.log_text("name", dataset["name"].split(".")[0])
           X,y = preproces_data(X,y)
-          X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42, test_size=0.3)
-          
+          X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=200, test_size=0.3)
+          print('cat')
+          get_cat_score(X_train, y_train, X_test, y_test)
           print('lgbm')
           get_lgbm_score(X_train,y_train,X_test,y_test)
           print('xgb')
@@ -215,17 +167,16 @@ def evaluate_single():
           # print('grid')
           # get_grid_score(X_train, y_train, X_test, y_test)
           print('bayes-cv')
-          get_bayes_scikit_score_cv(X_train, y_train, X_test, y_test, folds = 5, max_evals = 25, original = [_X_train, _X_test, _y_train, _y_test])
-        #   print('bayes-10')
-        #   get_bayes_scikit_score(X_train, y_train, X_test, y_test, X_val, y_val, max_evals = 10)
-        #   print('bayes-15')
-        #   get_bayes_scikit_score(X_train, y_train, X_test, y_test, X_val, y_val, max_evals = 15)
-        #   print('bayes-25')
-        #   get_bayes_scikit_score(X_train, y_train, X_test, y_test, X_val, y_val, max_evals = 25)
+          get_bayes_scikit_score_cv(X_train, y_train, X_test, y_test, folds = 5, max_evals = 30)
+          print('bayes-cv')
+          get_bayes_scikit_score_cv(X_train, y_train, X_test, y_test, folds = 5, max_evals = 15)
+          print('bayes-cv')
+          get_bayes_scikit_score_cv(X_train, y_train, X_test, y_test, folds = 5, max_evals = 10)
+
          
         except Exception as ex:
           print(ex)
-          input()
+          neptune.log_text('failed', 'yes')
 if __name__ == '__main__':
     
     evaluate_single()

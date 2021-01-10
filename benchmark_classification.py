@@ -18,11 +18,13 @@ import neptune
 from skopt import BayesSearchCV
 from skopt.callbacks import DeltaYStopper, DeltaXStopper
 import os
+from sklearn.model_selection import cross_val_score
+
 
 objective = 'classification'
 
 token = 'eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vdWkubmVwdHVuZS5haSIsImFwaV91cmwiOiJodHRwczovL3VpLm5lcHR1bmUuYWkiLCJhcGlfa2V5IjoiYTFlODM1OWItZWMxMC00Yzg1LWE0YmMtMzkwNmUxYWI1ZmZlIn0='
-project_name = 'damiankucharski/bayes-cv-split'
+project_name = 'damiankucharski/cv-score-recorded'
 neptune.init(project_qualified_name= project_name, # change this to your `workspace_name/project_name`
              api_token=token, # change this to your api token
             )
@@ -83,25 +85,44 @@ def change_df_column(df,to_change,new_name):
 
 def get_lgbm_score(X_train,y_train,X_test,y_test):
     lgbm_default = LGBMClassifier()
+    lgbm_cross = LGBMClassifier()
+    np.random.seed(200)
+    cross_score = np.mean(cross_val_score(lgbm_cross, X_train, y_train, cv=5))
+
     lgbm_default.fit(X_train, y_train)
-    score_lgbm = accuracy_score(y_test, lgbm_default.predict(X_test))
+    score_lgbm = lgbm_default.score(X_test, y_test)
+
     neptune.log_metric('lgbm', score_lgbm)
+    neptune.log_metric('lgbm_cross_score', cross_score)
     return score_lgbm
 
 def get_xgb_score(X_train,y_train,X_test,y_test):
     xgb_default = XGBClassifier()
+    xgb_cross = XGBClassifier()
+    np.random.seed(200)
+    cross_score = np.mean(cross_val_score(xgb_cross, X_train, y_train, cv=5))
+
     xgb_default.fit(X_train, y_train)
-    score_xgb = accuracy_score(y_test, xgb_default.predict(X_test))
+    score_xgb = xgb_default.score(X_test, y_test)
+
     neptune.log_metric('xgb', score_xgb)
+    neptune.log_metric('xgb_cross_score', cross_score)
     return score_xgb
 
 def get_cat_score(X_train,y_train,X_test,y_test):
     cat_default = CatBoostClassifier(logging_level="Silent")
+    cat_cross = CatBoostClassifier(logging_level="Silent")
+    np.random.seed(200)
+    cross_score = np.mean(cross_val_score(cat_cross, X_train, y_train, cv=5))
+
     cat_default.fit(X_train, y_train)
-    score_cat = accuracy_score(y_test, cat_default.predict(X_test))
+    score_cat = cat_default.score(X_test, y_test)
+
     neptune.log_metric('cat', score_cat)
+    neptune.log_metric('cat_cross_score', cross_score)
     return score_cat
 def get_grid_score(X_train,y_train,X_test,y_test,folds=5):
+    np.random.seed(200)
     model = GridSelector('classification',folds=folds, steps=6)
     model.fit(X_train, y_train)
     score = accuracy_score(y_test, model.predict(X_test))
@@ -133,9 +154,11 @@ def get_bayes_scikit_score_cv(X_train,y_train,X_test,y_test, X_val=None, y_val= 
     ___ = opt_lgbm.fit(X_train, y_train, callback = [DeltaXStopper(0.01), DeltaYStopper(0.01)])
 
     scores = [opt_cat.score(X_test, y_test), opt_xgb.score(X_test, y_test), opt_lgbm.score(X_test, y_test)]
+    train_scores  = [opt_cat.best_score_, opt_xgb.best_score_, opt_lgbm.best_score_]
     score = max(scores)
-
+    cross_score = max(train_scores)
     neptune.log_metric(f'skopt-{max_evals}-iterations-{folds}-folds', score)
+    neptune.log_metric('skopt train holdout score', cross_score)
     return score
 
 def evaluate_single():
