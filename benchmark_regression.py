@@ -23,7 +23,7 @@ import os
 objective = 'regression'
 
 token = 'eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vdWkubmVwdHVuZS5haSIsImFwaV91cmwiOiJodHRwczovL3VpLm5lcHR1bmUuYWkiLCJhcGlfa2V5IjoiNTdiOWEyMDQtNWMxNi00MzY1LTk3N2ItMjY0MmI3Njk1NmUwIn0='
-project_name = 'arkadiusz-czerwinski/bayes-cv-split'
+project_name = 'arkadiusz-czerwinski/bayes-cv-split-200'
 neptune.init(project_qualified_name= project_name, # change this to your `workspace_name/project_name`
              api_token=token, # change this to your api token
             )
@@ -155,7 +155,7 @@ def evaluate_single():
           X, y = data.drop(columns=['class']), data['class']
           neptune.log_text("name", dataset["name"].split(".")[0])
           X,y = preproces_data(X,y)
-          X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42, test_size=0.3)
+          X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=200, test_size=0.3)
           print('cat')
           get_cat_score(X_train, y_train, X_test, y_test)
           print('lgbm')
