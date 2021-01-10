@@ -24,7 +24,7 @@ from sklearn.model_selection import cross_val_score
 objective = 'classification'
 
 token = 'eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vdWkubmVwdHVuZS5haSIsImFwaV91cmwiOiJodHRwczovL3VpLm5lcHR1bmUuYWkiLCJhcGlfa2V5IjoiYTFlODM1OWItZWMxMC00Yzg1LWE0YmMtMzkwNmUxYWI1ZmZlIn0='
-project_name = 'damiankucharski/cv-score-recorded'
+project_name = 'damiankucharski/grid'
 neptune.init(project_qualified_name= project_name, # change this to your `workspace_name/project_name`
              api_token=token, # change this to your api token
             )
@@ -177,16 +177,16 @@ def evaluate_single():
           X, y = data.drop(columns=['class']), data['class']
           X,y = preproces_data(X,y)
           X_train, X_test, y_train, y_test = train_test_split(X, y, stratify = y, random_state=42, test_size=0.3)
-          print('cat')
-          get_cat_score(X_train, y_train, X_test, y_test)
-          print('lgbm')
-          get_lgbm_score(X_train,y_train,X_test,y_test)
-          print('xgb')
-          get_xgb_score(X_train, y_train, X_test, y_test)
-          # print('grid')
-          # get_grid_score(X_train, y_train, X_test, y_test)
-          print('bayes-cv')
-          get_bayes_scikit_score_cv(X_train, y_train, X_test, y_test, folds = 5, max_evals = 30)
+        #   print('cat')
+        #   get_cat_score(X_train, y_train, X_test, y_test)
+        #   print('lgbm')
+        #   get_lgbm_score(X_train,y_train,X_test,y_test)
+        #   print('xgb')
+        #   get_xgb_score(X_train, y_train, X_test, y_test)
+          print('grid')
+          get_grid_score(X_train, y_train, X_test, y_test)
+        #   print('bayes-cv')
+        #   get_bayes_scikit_score_cv(X_train, y_train, X_test, y_test, folds = 5, max_evals = 30)
         #   print('bayes-10')
         #   get_bayes_scikit_score(X_train, y_train, X_test, y_test, X_val, y_val, max_evals = 10)
         #   print('bayes-15')
