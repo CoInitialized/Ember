@@ -134,9 +134,11 @@ def get_bayes_scikit_score_cv(X_train,y_train,X_test,y_test, X_val=None, y_val= 
     ___ = opt_lgbm.fit(X_train, y_train, callback = [DeltaXStopper(0.001), DeltaYStopper(0.001)])
 
     scores = [opt_cat.score(X_test, y_test), opt_xgb.score(X_test, y_test), opt_lgbm.score(X_test, y_test)]
+    scores_overfit = [opt_cat.score(X_test, y_test), opt_xgb.score(X_test, y_test), opt_lgbm.score(X_test, y_test)]
     score = max(scores)
-
+    score_overfit = max(scores_overfit)
     neptune.log_metric(f'skopt-{max_evals}-iterations-{folds}-folds', score)
+    neptune.log_metric(f'skopt-{max_evals}-iterations-{folds}-folds-overfit', score_overfit)
     return score
 
 def evaluate_single():
