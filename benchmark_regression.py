@@ -23,7 +23,7 @@ import os
 objective = 'regression'
 
 token = 'eyJhcGlfYWRkcmVzcyI6Imh0dHBzOi8vdWkubmVwdHVuZS5haSIsImFwaV91cmwiOiJodHRwczovL3VpLm5lcHR1bmUuYWkiLCJhcGlfa2V5IjoiNTdiOWEyMDQtNWMxNi00MzY1LTk3N2ItMjY0MmI3Njk1NmUwIn0='
-project_name = 'arkadiusz-czerwinski/bayes-cv-split-200'
+project_name = 'arkadiusz-czerwinski/bayes-cv-split-200-overfit'
 neptune.init(project_qualified_name= project_name, # change this to your `workspace_name/project_name`
              api_token=token, # change this to your api token
             )
@@ -134,7 +134,7 @@ def get_bayes_scikit_score_cv(X_train,y_train,X_test,y_test, X_val=None, y_val= 
     ___ = opt_lgbm.fit(X_train, y_train, callback = [DeltaXStopper(0.001), DeltaYStopper(0.001)])
 
     scores = [opt_cat.score(X_test, y_test), opt_xgb.score(X_test, y_test), opt_lgbm.score(X_test, y_test)]
-    scores_overfit = [opt_cat.score(X_test, y_test), opt_xgb.score(X_test, y_test), opt_lgbm.score(X_test, y_test)]
+    scores_overfit = [opt_cat.best_score_, opt_xgb.best_score_, opt_lgbm.best_score_]
     score = max(scores)
     score_overfit = max(scores_overfit)
     neptune.log_metric(f'skopt-{max_evals}-iterations-{folds}-folds', score)
