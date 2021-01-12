@@ -48,7 +48,7 @@ def main():
                                 ('regression', 'classification')
                             )
     iters = int(st.text_input("Please provide maximal number of itterations",10))
-    file = st.file_uploader("Upload file", type=['csv','xlm'])
+    file = st.file_uploader("Upload file", type=['csv'])
     show_file = st.empty()
     if not file:
         show_file.info("Please upload a file of type: " + ", ".join(['xlm','csv']))
