@@ -128,6 +128,7 @@ It will open server on localhost with simple application providing beforemention
 - Extend optimization module so it can be used in more general cases
 - Build visualization module
 - Build automatic dashboard
+- Sphinx docs
 - <b>Publish as PyPi package</b>
 
 
