@@ -11,7 +11,7 @@ class Fraction_Selector(BaseEstimator, TransformerMixin):
 
     @staticmethod
     def select_by_fraction_missing(X, fraction: float, inplace : bool = False, ignored_columns = None):
-
+        print(type(X))
         if not isinstance(X, np.ndarray) and not isinstance(X, pd.DataFrame):
             raise Exception("Not valid type of X")
 
@@ -30,10 +30,17 @@ class Fraction_Selector(BaseEstimator, TransformerMixin):
         columns = list(dataframe.columns)
         to_choose = []
         for column in columns:
+            print(column)
             if column not in ignored_columns:
                 percent_missing = dataframe[column].isnull().sum() / df_len
-                if percent_missing > fraction:
+                print(f"Missing {percent_missing}")
+                if percent_missing < fraction:
+                    print("Selecting")
                     to_choose.append(column)
+                else:
+                    print("Ignoring")
+            else:
+                print("ignoring")
 
         if inplace:
             return dataframe.drop(columns = to_choose), to_choose
@@ -49,7 +56,7 @@ class Fraction_Selector(BaseEstimator, TransformerMixin):
             ignored_columns (list, optional): If data is provided as dataframe this argument can be used to specify which columns to ignore checking. Defaults to [].
         """
         self.fraction = fraction
-        self.drop = drop
+        self.inplace = inplace
         self.ignored_columns = ignored_columns
 
     def fit(self, X, y = None):
@@ -62,10 +69,10 @@ class Fraction_Selector(BaseEstimator, TransformerMixin):
 
 
         """
-        self.frame, self.chosen_columns = self.select_by_fraction_missing(self.fraction, self.inplace, self.ignored_columns)
+        self.frame, self.chosen_columns = self.select_by_fraction_missing(X, self.fraction, self.inplace, self.ignored_columns)
         return self
 
-    def trasform(self, X, y = None):
+    def transform(self, X, y = None):
         """Return data with only < fraction missing values in column.
 
         Args:
@@ -78,7 +85,7 @@ class Fraction_Selector(BaseEstimator, TransformerMixin):
         Returns:
             (numpy.ndarray or pandas.DataFrame): Transformed data
         """
-        return self.frame
+        return X.loc[:, self.chosen_columns]
 
 
 class DtypeSelector(BaseEstimator, TransformerMixin):
@@ -112,7 +119,7 @@ class DtypeSelector(BaseEstimator, TransformerMixin):
         """
         if isinstance(X, np.ndarray):
             X = pd.DataFrame(X)
-        return np.array(X.select_dtypes(include=self.dtype))
+        return X.select_dtypes(include=self.dtype)
 
 
 class NameFixer:

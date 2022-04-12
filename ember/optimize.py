@@ -176,8 +176,12 @@ class GridSelector(Selector):
             learned_params = {}
             if key == 'CAT':
                 learned_params['logging_level'] = 'Silent'
+                learned_params['random_seed'] = 1992
             elif key == 'XGB':
                 learned_params['verbosity'] = 0
+                learned_params['random_state'] = 1992
+            elif key == "LGBM":
+                learned_params['random_state'] = 1992
                 # pass
             print(f"Searching model for {key}")
             for i in range(min([self.steps,len(self.params[key])])):
@@ -231,9 +235,9 @@ class GridSelector(Selector):
                 X_train, X_test = X[train_index], X[test_index]
                 y_train, y_test = y[train_index], y[test_index]
                 if key == 'CAT':
-                    base_model = self.models[key](logging_level = 'Silent')
+                    base_model = self.models[key]()#(logging_level = 'Silent')
                 elif key == 'XGB':
-                    base_model = self.models[key](verbosity = 0)
+                    base_model = self.models[key]()#(verbosity = 0)
                 else:
                     base_model = self.models[key]()
                 base_model.fit(X_train,y_train)
@@ -243,9 +247,9 @@ class GridSelector(Selector):
             if np.mean(scores) > best_score_for_key:
                 best_score_for_key = np.mean(scores)
                 if key == 'CAT':
-                    model = self.models[key](logging_level = 'Silent')
+                    model = self.models[key]()#(logging_level = 'Silent')
                 elif key == 'XGB':
-                    model = self.models[key](verbosity = 0)
+                    model = self.models[key]()#(verbosity = 0)
                 else:
                     model = self.models[key]()
                 model.fit(X,y)
@@ -290,7 +294,7 @@ class BayesSelector(Selector):
         
 
         if objective == 'classification':
-            self.scoring = accuracy_score
+            self.scoring = kwargs.get('scoring', accuracy_score)
             self.loss = lambda y_true, y_pred: 1 - self.scoring(y_true, y_pred)
             self.models = {
                 "XGB": XGBClassifier,
@@ -299,7 +303,7 @@ class BayesSelector(Selector):
             }
            
         elif objective == 'regression':
-            self.scoring = r2_score
+            self.scoring = kwargs.get('scoring', r2_score)
             self.loss = lambda y_true, y_pred, : 1 + (-1 * self.scoring(y_true, y_pred))
             self.models = {
                 "XGB": XGBRegressor,
@@ -319,6 +323,18 @@ class BayesSelector(Selector):
         model = self.models[space['name']]
         name = space['name']
         space = fix_hyperparams(space)
+
+        params = {}
+        if name == 'CAT':
+            if silent:
+                params['logging_level'] = 'Silent'
+            params['random_seed'] = 1992
+        elif name == 'XGB':
+            if silent:
+                params['verbosity'] = 0
+            params['random_state'] = 1992
+        elif name == "LGBM":
+            params['random_state'] = 1992
 
         ### TEST IF IT ACTUALLY WORKS
         if name == 'CAT' and silent:
@@ -503,11 +519,13 @@ class BaesianSklearnSelector(Selector):
             self.scoring = r2_score
             self.loss = lambda y_true, y_pred, : 1 + (-1 * self.scoring(y_true, y_pred))
             self.models = {
-                "XGB": XGBRegressor,
-                "LGBM": LGBMRegressor,
-                "CAT": CatBoostRegressor
-
+                # "LGBM": LGBMRegressor,
             }
+            if kwargs.get('use_catboost', False):
+                print('using catboost, may take a long time')
+                self.models['CAT'] = CatBoostRegressor
+            else:
+                print("Not using catboost, quick option")
         else: 
             raise Exception("Unknown objective, choose classification or regression")
 
@@ -520,9 +538,9 @@ class BaesianSklearnSelector(Selector):
         for name,param in zip(names,listofparams):
             params[name] = param
         if model_key == 'CAT' and silent:
-            params['logging_level'] = 'Silent'
+            pass
         elif model_key == 'XGB' and silent:
-            params['verbosity'] = 0
+            params['verbosity'] = 2
         _model = self.model(**params)
 
         loss = None
